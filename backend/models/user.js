@@ -1,0 +1,49 @@
+// models/User.js
+module.exports = (sequelize, DataTypes) => {
+  const User = sequelize.define('User', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    username: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    verificationCode: {
+      type: DataTypes.STRING,
+    },
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    roleId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      defaultValue: '57c963a9-2272-11f0-a293-40b03495ba25', // default to "user"
+      references: {
+        model: 'Roles',
+        key: 'id',
+      },
+    },
+  });
+
+  User.associate = (models) => {
+    User.belongsTo(models.Role, {
+      foreignKey: 'roleId',
+      as: 'role',
+    });
+  };
+
+  return User;
+};

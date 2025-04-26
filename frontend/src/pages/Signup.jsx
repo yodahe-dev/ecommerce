@@ -13,6 +13,7 @@ function Signup() {
     e.preventDefault();
     const res = await signup(form);
     setMsg(res.error || 'Signup successful');
+    <Navigate to="/profile" />
   };
 
   return (

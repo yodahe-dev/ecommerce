@@ -6,7 +6,8 @@ import Signup from './pages/Signup';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import { FaSpinner } from 'react-icons/fa';
-import ProtectedRoute from './components/ProtectedRoute'; // Make sure to create this
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicOnlyRoute from './components/PublicOnlyRoute'; // new component
 
 function App() {
   const [token, setToken] = useState('');
@@ -48,11 +49,28 @@ function App() {
     <div>
       <Nav token={token} isAuthenticated={!!token} userEmail={email} onLogout={handleLogout} />
       <Routes>
-        <Route path="/" element={<Navigate to="/profile" />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+        <Route path="/" element={<Navigate to="/account" />} />
+
         <Route
-          path="/profile"
+          path="/signup"
+          element={
+            <PublicOnlyRoute isAuthenticated={!!token}>
+              <Signup />
+            </PublicOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute isAuthenticated={!!token}>
+              <Login onLogin={handleLogin} />
+            </PublicOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/account"
           element={
             <ProtectedRoute isAuthenticated={!!token}>
               <Profile token={token} />

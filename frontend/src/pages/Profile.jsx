@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { getProfile } from '../api';
+import { useNavigate } from 'react-router-dom';
 import { FaUserCircle } from 'react-icons/fa'; // user icon
 
 function Profile({ token }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // add this
 
   useEffect(() => {
     if (token) {
@@ -13,7 +15,12 @@ function Profile({ token }) {
       getProfile(token)
         .then((res) => {
           if (res.error) {
-            setError(res.error);
+            if (res.error === 'Invalid token') {
+              localStorage.removeItem('token'); // remove bad token
+              navigate('/login'); // redirect to login
+            } else {
+              setError(res.error); // other errors
+            }
           } else {
             setUser(res);
           }
@@ -23,16 +30,10 @@ function Profile({ token }) {
           setError('An error occurred while fetching the profile.');
           setLoading(false);
         });
+    } else {
+      navigate('/login'); // no token, force login
     }
-  }, [token]);
-
-  if (!token) {
-    return (
-      <div className="text-center p-6 text-lg text-gray-600">
-        Please log in to view your profile.
-      </div>
-    );
-  }
+  }, [token, navigate]);
 
   if (loading) {
     return (

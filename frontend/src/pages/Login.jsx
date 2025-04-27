@@ -16,7 +16,7 @@ function Login({ onLogin }) {
     const res = await login(form);
     if (res.token) {
       onLogin(res.token);
-      navigate('/profile');
+      navigate('/account');
     } else {
       setMsg(res.error);
     }

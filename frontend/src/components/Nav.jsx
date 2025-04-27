@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { FaUserAlt, FaSignOutAlt, FaCog, FaChevronDown, FaSpinner } from 'react-icons/fa'; // Added FaSpinner for loading state
+import { Link, useNavigate } from 'react-router-dom';
+import { FaUserAlt, FaSignOutAlt, FaCog, FaChevronDown } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getProfile } from '../api'; // Assuming getProfile is the API call to fetch the user profile
+import { getProfile } from '../api'; // Adjust path if needed
 
 const Nav = ({ isAuthenticated, onLogout, userEmail, token }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // For loading state
+  const [loading, setLoading] = useState(true);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
@@ -25,23 +26,23 @@ const Nav = ({ isAuthenticated, onLogout, userEmail, token }) => {
 
   // Fetch user profile when token changes
   useEffect(() => {
-    if (token) {
-      setLoading(true);
-      getProfile(token)
-        .then((res) => {
-          if (res.error) {
-            setError(res.error);
-          } else {
-            setUser(res);
-          }
+    const fetchProfile = async () => {
+      if (token) {
+        setLoading(true);
+        try {
+          const res = await getProfile(token);
+          setUser(res);
+        } catch (err) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        } finally {
           setLoading(false);
-        })
-        .catch((err) => {
-          setError('An error occurred while fetching the profile.');
-          setLoading(false);
-        });
-    }
-  }, [token]);
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [token, navigate]);
 
   const dropdownVariants = {
     hidden: { opacity: 0, y: -10 },
@@ -60,7 +61,7 @@ const Nav = ({ isAuthenticated, onLogout, userEmail, token }) => {
           </Link>
 
           <div className="flex items-center space-x-4">
-          <Link
+            <Link
               to="/"
               className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-gray-700/30"
             >
@@ -101,7 +102,7 @@ const Nav = ({ isAuthenticated, onLogout, userEmail, token }) => {
                       <div className="py-2">
                         <div className="px-4 py-3 border-b border-gray-700">
                           <p className="text-sm text-gray-200">Signed in as</p>
-                          <p className="text-sm font-medium text-white truncate">{user.email}</p>
+                          <p className="text-sm font-medium text-white truncate">{user?.email || userEmail}</p>
                         </div>
 
                         <Link

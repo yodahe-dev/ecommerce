@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, Role } = require('../models');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -39,7 +39,13 @@ router.get('/profile', async (req, res) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findByPk(decoded.id);
+    const user = await User.findByPk(decoded.id, {
+      include: {
+        model: Role,
+        as: 'role', // Ensure the role is included in the response
+        attributes: ['name'], // Get only the role's name
+      },
+    });
     res.json(user);
   } catch {
     res.status(403).json({ error: 'Invalid token' });

@@ -1,65 +1,82 @@
 import { useState } from 'react';
-import { signup } from '../api';
-import { Navigate } from 'react-router-dom';
+import { signup, resendOtp, verifyOtp } from '../api'; // Import API functions
+import { Navigate, Link } from 'react-router-dom';
 
 function Signup() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [msg, setMsg] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
-  const [otp, setOtp] = useState(Array(6).fill(''));
+  const [isVerifyNeeded, setIsVerifyNeeded] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const [redirect, setRedirect] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleOtpChange = (e, index) => {
+  const handleOtpChange = (e) => {
     const value = e.target.value;
     if (/[^0-9]/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
 
-    if (index < 5 && value) {
-      document.getElementById(`otp-input-${index + 1}`).focus();
-    }
-
-    if (newOtp.every((digit) => digit !== '')) {
-      handleVerification();
+    if (value.length <= 6) {
+      setOtp(value);
+      setIsVerifying(value.length === 6);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const res = await signup(form);
-    setMsg(res.error || 'Signup successful');
-    if (res.error) return;
-    setIsVerified(true);
-  };
 
-  const handleVerification = async () => {
-    const otpString = otp.join('');
-    try {
-      const res = await fetch('http://localhost:5000/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, otp: otpString }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setMsg('Verification successful');
-        setRedirect(true);
-      } else {
-        setMsg('Invalid OTP');
-      }
-    } catch (error) {
-      setMsg('Error verifying OTP');
+    if (res.error) {
+      setMsg(res.error);
+    } else {
+      setMsg('Signup successful. Check your email for OTP.');
+      setIsVerifyNeeded(true);
+      startResendTimer();
     }
   };
 
+  const handleVerification = async () => {
+    if (otp.length !== 6) return;
+
+    const res = await verifyOtp({ email: form.email, otp });
+
+    if (res.message) {
+      setMsg('Verification successful.');
+      setRedirect(true);
+    } else {
+      setMsg(res.error || 'Invalid OTP');
+    }
+  };
+
+  const handleResendOtp = async () => {
+    const res = await resendOtp({ email: form.email });
+
+    if (res.message) {
+      setMsg('OTP resent successfully.');
+      startResendTimer();
+    } else {
+      setMsg(res.error || 'Failed to resend OTP.');
+    }
+  };
+
+  const startResendTimer = () => {
+    setResendTimer(60);
+    const timer = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   if (redirect) {
-    return <Navigate to="/" />;
+    return <Navigate to="/login" />;
   }
 
   return (
@@ -67,69 +84,80 @@ function Signup() {
       <div className="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full">
         <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">Sign Up</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input
-              name="username"
-              placeholder="Username"
-              type="text"
-              className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <input
-              name="email"
-              placeholder="Email"
-              type="email"
-              className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <input
-              name="password"
-              placeholder="Password"
-              type="password"
-              className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              onChange={handleChange}
-            />
-          </div>
+          <input
+            name="username"
+            placeholder="Username"
+            type="text"
+            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={handleChange}
+            required
+          />
+          <input
+            name="email"
+            placeholder="Email"
+            type="email"
+            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={handleChange}
+            required
+          />
+          <input
+            name="password"
+            placeholder="Password"
+            type="password"
+            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={handleChange}
+            required
+          />
           <button
             type="submit"
-            className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg transition-all duration-200 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
             Sign Up
           </button>
           {msg && (
-            <p className={`text-sm text-center mt-2 ${msg === 'Signup successful' ? 'text-green-500' : 'text-red-500'}`}>
+            <p className="text-sm text-center mt-2 text-red-500">
               {msg}
             </p>
           )}
         </form>
 
-        {isVerified && (
+        {isVerifyNeeded && (
           <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
             <div className="bg-white p-8 rounded-lg shadow-lg w-[400px]">
               <h3 className="text-xl font-semibold mb-4">Verify OTP</h3>
-              <div className="flex justify-between">
-                {otp.map((digit, index) => (
-                  <input
-                    key={index}
-                    id={`otp-input-${index}`}
-                    type="text"
-                    maxLength="1"
-                    value={digit}
-                    onChange={(e) => handleOtpChange(e, index)}
-                    className="w-12 h-12 text-center text-2xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                ))}
-              </div>
+              <input
+                type="text"
+                maxLength="6"
+                value={otp}
+                onChange={handleOtpChange}
+                className="w-50 h-12 text-center text-2xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+                placeholder="Enter OTP"
+              />
               <button
                 onClick={handleVerification}
-                className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg transition-all duration-200 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 mt-4"
+                disabled={!isVerifying}
+                className={`w-full py-3 font-semibold rounded-lg ${
+                  isVerifying
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400'
+                    : 'bg-gray-400 text-white cursor-not-allowed'
+                }`}
               >
                 Verify OTP
               </button>
+              <div className="text-center mt-4">
+                {resendTimer > 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Resend OTP in {resendTimer}s
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleResendOtp}
+                    className="text-indigo-600 hover:text-indigo-700 font-semibold text-sm"
+                  >
+                    Resend OTP
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -137,9 +165,9 @@ function Signup() {
         <div className="text-center mt-4">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <a href="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+            <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
               Login
-            </a>
+            </Link>
           </p>
         </div>
       </div>

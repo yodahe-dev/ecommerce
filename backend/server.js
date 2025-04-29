@@ -1,11 +1,15 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const { sequelize } = require('./models');
 const authRoutes = require('./routes/auth');
+require('dotenv').config();
 
 const app = express();
 
-app.use(cors());
+// Middleware
+app.use(cors("http://localhost:5173"));
+app.use(helmet());
 app.use(express.json());
 app.use('/api', authRoutes);
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { signup, resendOtp, verifyOtp } from '../api'; // Import API functions
 import { Navigate, Link } from 'react-router-dom';
+import { FaRegEye, FaEyeSlash } from 'react-icons/fa'; // Optional, for password visibility toggle
 
 function Signup() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
@@ -10,6 +11,7 @@ function Signup() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [redirect, setRedirect] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -75,20 +77,24 @@ function Signup() {
     }, 1000);
   };
 
+  const togglePasswordVisibility = () => {
+    setPasswordVisible((prev) => !prev);
+  };
+
   if (redirect) {
     return <Navigate to="/login" />;
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-indigo-600 to-blue-500 p-6">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full">
-        <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">Sign Up</h2>
+    <div className="flex items-center justify-center min-h-screen p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-sm w-full">
+        <h2 className="text-2xl font-semibold text-center text-gray-800 dark:text-white mb-6">Sign Up</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             name="username"
             placeholder="Username"
             type="text"
-            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
             onChange={handleChange}
             required
           />
@@ -96,18 +102,28 @@ function Signup() {
             name="email"
             placeholder="Email"
             type="email"
-            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
             onChange={handleChange}
             required
           />
-          <input
-            name="password"
-            placeholder="Password"
-            type="password"
-            className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            onChange={handleChange}
-            required
-          />
+          <div className="relative">
+            <input
+              name="password"
+              placeholder="Password"
+              type={passwordVisible ? "text" : "password"}
+              className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              onChange={handleChange}
+              required
+            />
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+            >
+              {passwordVisible ? <FaEyeSlash /> : <FaRegEye />}
+            </button>
+          </div>
+
           <button
             type="submit"
             className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -130,7 +146,7 @@ function Signup() {
                 maxLength="6"
                 value={otp}
                 onChange={handleOtpChange}
-                className="w-50 h-12 text-center text-2xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+                className="w-full h-12 text-center text-2xl border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4 dark:bg-gray-700 dark:text-white"
                 placeholder="Enter OTP"
               />
               <button
@@ -163,7 +179,7 @@ function Signup() {
         )}
 
         <div className="text-center mt-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Already have an account?{' '}
             <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
               Login

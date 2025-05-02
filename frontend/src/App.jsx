@@ -1,15 +1,19 @@
+// src/App.js
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Nav from './components/Nav';
 import Sidebar from './components/Sidebar';
+import RightSidebar from './components/RightSidebar';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
-import { FaSpinner, FaBars } from 'react-icons/fa';
+import Network from './pages/network';
+import RoomProfile from './pages/Rooms';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
-import RightSidebar from './components/RightSidebar';
+import { FaSpinner, FaBars } from 'react-icons/fa';
+import CreatePage from './pages/create';
 
 function App() {
   const [token, setToken] = useState('');
@@ -19,14 +23,12 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    const savedEmail = localStorage.getItem('email');
+    const t = localStorage.getItem('token');
+    const e = localStorage.getItem('email');
     const theme = localStorage.getItem('theme');
-
-    if (savedToken) setToken(savedToken);
-    if (savedEmail) setEmail(savedEmail);
+    if (t) setToken(t);
+    if (e) setEmail(e);
     if (theme === 'dark') setDarkMode(true);
-
     setIsLoading(false);
   }, []);
 
@@ -40,11 +42,11 @@ function App() {
     }
   }, [darkMode]);
 
-  const handleLogin = (token, email) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('email', email);
-    setToken(token);
-    setEmail(email);
+  const handleLogin = (t, e) => {
+    localStorage.setItem('token', t);
+    localStorage.setItem('email', e);
+    setToken(t);
+    setEmail(e);
   };
 
   const handleLogout = () => {
@@ -74,7 +76,7 @@ function App() {
         </button>
       </div>
 
-      {/* Sidebar */}
+      {/* Left Sidebar */}
       <Sidebar
         onLogout={handleLogout}
         isOpen={sidebarOpen}
@@ -83,8 +85,8 @@ function App() {
         setDarkMode={setDarkMode}
       />
 
+      {/* Main content */}
       <div className="flex-1 flex flex-col lg:ml-64 transition-all">
-        {/* Nav */}
         <Nav
           token={token}
           isAuthenticated={!!token}
@@ -94,10 +96,12 @@ function App() {
           setDarkMode={setDarkMode}
         />
 
-        {/* Main */}
         <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/"       element={<Home />} />
+            <Route path="/network" element={<Network />} />
+            <Route path="/rooms"   element={<RoomProfile />} />
+            <Route path="/create"   element={<CreatePage />} />
 
             <Route
               path="/signup"
@@ -129,8 +133,12 @@ function App() {
         </main>
       </div>
 
-      <RightSidebar darkMode={darkMode} setDarkMode={setDarkMode} onLogout={handleLogout} />
-
+      {/* Right Sidebar (hidden on small screens) */}
+      <RightSidebar
+        darkMode={darkMode}
+        width="w-96"
+        className="hidden lg:flex"
+      />
     </div>
   );
 }

@@ -37,7 +37,7 @@ async function sendEmail(email, otp) {
       <div style="font-family: Arial, sans-serif; font-size: 18px;">
         <p>Hello,</p>
         <p>Your verification code is:</p>
-        <p style="font-size:24px; font-weight:bold; color:blue;">${otp}</p>
+        <p style="font-size:30px; font-weight:bold; color:blue;">${otp}</p>
         <p>Please use this code to verify your account.</p>
         <p>Thank you.</p>
       </div>
@@ -84,7 +84,7 @@ router.post('/signup', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: 'User already exists' });
   }
-});
+}); 
 
 router.post('/verify', async (req, res) => {
   const { email, otp } = req.body;
@@ -130,7 +130,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Please verify your email first. A new verification code has been sent.' });
   }
 
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '15m' });
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
   res.json({ token });
 });
 

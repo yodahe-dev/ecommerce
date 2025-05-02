@@ -1,16 +1,15 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaUser, FaPlusCircle, FaUsers, FaDoorOpen } from 'react-icons/fa';
-import { MessageCircle , Network } from 'lucide-react';
+import { FaHome, FaUser, FaUsers, FaPlusCircle, FaDoorOpen } from 'react-icons/fa';
+import { MdMessage, MdGroupAdd } from 'react-icons/md';
+import { Braces, HandshakeIcon, Network, PencilRuler } from 'lucide-react';
 
-const Sidebar = ({ onLogout, isOpen, onClose, darkMode, setDarkMode }) => {
+const Sidebar = ({ isOpen, onClose, darkMode, setDarkMode }) => {
   const links = [
     { to: '/', label: 'Home', icon: <FaHome /> },
-    { to: '/network', label: 'Network', icon: <Network /> },
-    { to: '/chat', label: 'Chat', icon: <MessageCircle/> },
-    { to: '/create', label: 'New Project', icon: <FaPlusCircle /> },
-    { to: '/collabs', label: 'Collabs', icon: <FaUsers /> },
-    { to: '/rooms', label: 'Rooms', icon: <FaDoorOpen /> },
+    { to: '/network', label: 'Network', icon: <FaUsers /> },
+    { to: '/create', label: 'Create Project', icon: <FaPlusCircle /> },
+    { to: '/rooms', label: 'Rooms', icon: <HandshakeIcon /> },
   ];
 
   return (
@@ -20,8 +19,19 @@ const Sidebar = ({ onLogout, isOpen, onClose, darkMode, setDarkMode }) => {
       } lg:translate-x-0`}
     >
       <div className="h-full flex flex-col p-4">
-        <div className="text-2xl font-bold text-indigo-600 mb-6">CollabClub</div>
+        {/* Sidebar Header with Dark Mode Toggle */}
+        <div className="text-2xl font-semibold text-indigo-600 mb-6 flex items-center justify-between">
+          <span>CollabHub</span>
+          {/* Dark Mode Toggle Button */}
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full"
+          >
+            {darkMode ? '🌙' : '🌞'}
+          </button>
+        </div>
 
+        {/* Navigation Links */}
         <nav className="flex-1 space-y-2">
           {links.map(({ to, label, icon }) => (
             <NavLink
@@ -30,7 +40,7 @@ const Sidebar = ({ onLogout, isOpen, onClose, darkMode, setDarkMode }) => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition ${
                   isActive
-                    ? 'bg-gray-100 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400'
+                    ? 'bg-indigo-100 dark:bg-indigo-700 text-indigo-600 dark:text-indigo-300'
                     : 'text-gray-700 dark:text-gray-300'
                 }`
               }

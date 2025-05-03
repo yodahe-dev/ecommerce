@@ -20,7 +20,7 @@ function App() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {
     const t = localStorage.getItem('token');

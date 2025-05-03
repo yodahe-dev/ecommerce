@@ -1,4 +1,3 @@
-// models/User.js
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     id: {
@@ -6,15 +5,34 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     username: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
     },
-    email: {
+    bio: {
       type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
+      allowNull: true,
+    },
+    rating: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    followers: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    following: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    postsCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
     },
     password: {
       type: DataTypes.STRING,
@@ -41,6 +59,25 @@ module.exports = (sequelize, DataTypes) => {
     User.belongsTo(models.Role, {
       foreignKey: 'roleId',
       as: 'role',
+    });
+
+    User.hasMany(models.Post, {
+      foreignKey: 'userId',
+      as: 'userPosts',
+    });
+
+    User.belongsToMany(models.TeamBox, {
+      through: models.Member,
+      as: 'teams',
+      foreignKey: 'userId',
+      otherKey: 'teamBoxId',
+    });
+
+    User.belongsToMany(models.User, {
+      through: 'UserFollow',
+      as: 'followersList',
+      foreignKey: 'followerId',
+      otherKey: 'followingId',
     });
   };
 

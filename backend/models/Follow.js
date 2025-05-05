@@ -1,33 +1,40 @@
+// models/Follow.js
 module.exports = (sequelize, DataTypes) => {
-    const Follow = sequelize.define('Follow', {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
+  const Follow = sequelize.define('Follow', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    followerId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'Users', // Assuming Users table is named 'Users'
+        key: 'id',
       },
-      followerId: {
-        type: DataTypes.UUID,
-        allowNull: false,
+    },
+    followingId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'Users', // Assuming Users table is named 'Users'
+        key: 'id',
       },
-      followableId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-      },
-      followableType: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
+    },
+  });
+
+  Follow.associate = (models) => {
+    // A user can follow many users (one-to-many)
+    Follow.belongsTo(models.User, {
+      foreignKey: 'followerId',
+      as: 'follower',
     });
-  
-    Follow.associate = (models) => {
-      Follow.belongsTo(models.User, {
-        foreignKey: 'followerId',
-        as: 'follower',
-      });
-  
-      // No direct relation to User/TeamBox — handled manually in logic
-    };
-  
-    return Follow;
+    Follow.belongsTo(models.User, {
+      foreignKey: 'followingId',
+      as: 'following',
+    });
   };
-  
+
+  return Follow;
+};

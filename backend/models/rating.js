@@ -1,49 +1,68 @@
+// models/rating.js
 module.exports = (sequelize, DataTypes) => {
-    const Rating = sequelize.define('Rating', {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
+  const Rating = sequelize.define('Rating', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    rating: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: {
+        min: 1,
+        max: 10,
       },
-      raterId: {
-        type: DataTypes.UUID,
-        allowNull: false,
+    },
+    feedback: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    userId: {
+      // rater (always a User)
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'Users',
+        key: 'id',
       },
-      rateableId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-      },
-      rateableType: {
-        type: DataTypes.STRING, // 'User' or 'TeamBox'
-        allowNull: false,
-      },
-      score: {
-        type: DataTypes.FLOAT,
-        allowNull: false,
-        validate: {
-          min: 0,
-          max(value) {
-            if (this.isAdmin) {
-              if (value > 10) throw new Error('Max 10 for admin');
-            } else {
-              if (value > 5.1) throw new Error('Max 5.1 for users');
-            }
-          },
-        },
-      },
-      isAdmin: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
+    },
+    rateableId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    rateableType: {
+      type: DataTypes.ENUM('User', 'TeamBox'),
+      allowNull: false,
+    },
+  });
+
+  Rating.associate = (models) => {
+    // Rater
+    Rating.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'rater',
     });
-  
-    Rating.associate = (models) => {
-      Rating.belongsTo(models.User, {
-        foreignKey: 'raterId',
-        as: 'rater',
-      });
-    };
-  
-    return Rating;
+
+    // Optional helper for polymorphic target (manual logic needed)
+    models.User.hasMany(Rating, {
+      foreignKey: 'rateableId',
+      constraints: false,
+      scope: {
+        rateableType: 'User',
+      },
+      as: 'receivedRatings',
+    });
+
+    models.TeamBox.hasMany(Rating, {
+      foreignKey: 'rateableId',
+      constraints: false,
+      scope: {
+        rateableType: 'TeamBox',
+      },
+      as: 'receivedRatings',
+    });
   };
-  
+
+  return Rating;
+};

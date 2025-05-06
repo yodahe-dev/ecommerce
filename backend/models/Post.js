@@ -1,79 +1,52 @@
 module.exports = (sequelize, DataTypes) => {
-    const Post = sequelize.define('Post', {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
+  const Post = sequelize.define('Post', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    image: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    description: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      references: {
+        model: 'Users', // Ensure 'Users' is the correct table name
+        key: 'id',
       },
-      title: {
-        type: DataTypes.STRING,
-        allowNull: false,
+      allowNull: true,
+    },
+    teamBoxId: {
+      type: DataTypes.UUID,
+      references: {
+        model: 'TeamBoxes', // Ensure 'TeamBoxes' is the correct table name
+        key: 'id',
       },
-      image: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      description: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      userId: {
-        type: DataTypes.UUID,
-        references: {
-          model: 'Users',
-          key: 'id',
-        },
-        allowNull: true,
-      },
-      teamBoxId: {
-        type: DataTypes.UUID,
-        references: {
-          model: 'TeamBoxes',
-          key: 'id',
-        },
-        allowNull: true,
-      },
-      likesCount: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
-      favoritesCount: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
-      commentsCount: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
+      allowNull: true,
+    },
+  });
+
+  // Associations
+  Post.associate = (models) => {
+    Post.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'author',
     });
-  
-    Post.associate = (models) => {
-      Post.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'author',
-      });
-  
-      Post.belongsTo(models.TeamBox, {
-        foreignKey: 'teamBoxId',
-        as: 'teamBox',
-      });
-  
-      Post.hasMany(models.Comment, {
-        foreignKey: 'postId',
-        as: 'comments',
-      });
-  
-      Post.hasMany(models.Favorite, {
-        foreignKey: 'postId',
-        as: 'favorites',
-      });
-  
-      Post.hasMany(models.Like, {
-        foreignKey: 'postId',
-        as: 'likes',
-      });
-    };
-  
-    return Post;
+
+    Post.belongsTo(models.TeamBox, {
+      foreignKey: 'teamBoxId',
+      as: 'teamBox',
+    });
   };
-  
+
+  return Post;
+};

@@ -1,6 +1,6 @@
-// src/App.js
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import Nav from './components/Nav';
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -14,20 +14,26 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { FaSpinner, FaBars } from 'react-icons/fa';
 import CreatePage from './pages/create';
+import Postpage from './pages/createpost';
+import { getProfile } from './api';
 
 function App() {
   const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
+  const [darkMode, setDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const t = localStorage.getItem('token');
-    const e = localStorage.getItem('email');
+    const storedToken = localStorage.getItem('token');
+    const storedEmail = localStorage.getItem('email');
     const theme = localStorage.getItem('theme');
-    if (t) setToken(t);
-    if (e) setEmail(e);
+    if (storedToken) {
+      setToken(storedToken);
+      fetchAndSaveUserId(storedToken);
+    }
+    if (storedEmail) setEmail(storedEmail);
     if (theme === 'dark') setDarkMode(true);
     setIsLoading(false);
   }, []);
@@ -42,18 +48,33 @@ function App() {
     }
   }, [darkMode]);
 
-  const handleLogin = (t, e) => {
-    localStorage.setItem('token', t);
-    localStorage.setItem('email', e);
-    setToken(t);
-    setEmail(e);
+  const fetchAndSaveUserId = async (token) => {
+    try {
+      const user = await getProfile(token);
+      if (user?.id) {
+        localStorage.setItem('user_id', user.id);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user ID', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_id');
+    }
+  };
+
+  const handleLogin = (newToken, newEmail) => {
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('email', newEmail);
+    setToken(newToken);
+    setEmail(newEmail);
+    fetchAndSaveUserId(newToken);
+    navigate('/');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('email');
     setToken('');
     setEmail('');
+    navigate('/login');
   };
 
   if (isLoading) {
@@ -76,7 +97,7 @@ function App() {
         </button>
       </div>
 
-      {/* Left Sidebar */}
+      {/* Sidebar */}
       <Sidebar
         onLogout={handleLogout}
         isOpen={sidebarOpen}
@@ -85,7 +106,7 @@ function App() {
         setDarkMode={setDarkMode}
       />
 
-      {/* Main content */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col lg:ml-64 transition-all">
         <Nav
           token={token}
@@ -98,10 +119,11 @@ function App() {
 
         <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
           <Routes>
-            <Route path="/"       element={<Home />} />
+            <Route path="/" element={<Home />} />
             <Route path="/network" element={<Network />} />
-            <Route path="/rooms"   element={<RoomProfile />} />
-            <Route path="/create"   element={<CreatePage />} />
+            <Route path="/rooms" element={<RoomProfile />} />
+            <Route path="/create" element={<CreatePage />} />
+            <Route path="/posts" element={<Postpage />} />
 
             <Route
               path="/signup"
@@ -125,7 +147,7 @@ function App() {
               path="/account"
               element={
                 <ProtectedRoute isAuthenticated={!!token}>
-                  <Profile token={token} />
+                  <Profile token={token} darkMode={darkMode} setDarkMode={setDarkMode} />
                 </ProtectedRoute>
               }
             />
@@ -133,12 +155,8 @@ function App() {
         </main>
       </div>
 
-      {/* Right Sidebar (hidden on small screens) */}
-      <RightSidebar
-        darkMode={darkMode}
-        width="w-96"
-        className="hidden lg:flex"
-      />
+      {/* Right Sidebar */}
+      <RightSidebar darkMode={darkMode} width="w-96" className="hidden lg:flex" />
     </div>
   );
 }

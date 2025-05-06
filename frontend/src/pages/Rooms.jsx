@@ -209,7 +209,7 @@ const RoomProfile = ({ darkMode }) => {
                 <div ref={messagesEndRef}></div>
               </div>
               <div className="flex items-center gap-2">
-                <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} className="flex-1 px-4 py-2 border rounded-lg" placeholder="Type a message..." />
+                <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} className="flex-1 px-4 py-2 border rounded-lg text-black" placeholder="Type a message..." />
                 <button onClick={handleSendMessage} className="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"><FaPaperPlane /></button>
                 <input ref={fileInputRef} type="file" onChange={handleFileUpload} className="hidden" />
                 <button onClick={() => fileInputRef.current.click()} className="p-2 hover:text-indigo-600"><FaImage /></button>

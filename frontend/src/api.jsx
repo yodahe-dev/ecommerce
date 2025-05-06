@@ -8,6 +8,19 @@ export const signup = async (data) => {
   });
   return res.json();
 };
+// ../api.js
+export const createPost = async (data) => {
+  try {
+    const res = await fetch(`${API_BASE}/newpost`, {
+      method: 'POST',
+      body: data,
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: 'Failed to create post.' };
+  }
+};
+
 
 export const login = async (data) => {
   const res = await fetch(`${API_BASE}/login`, {

@@ -35,6 +35,14 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
+    avatar: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    bio: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   });
 
   User.associate = (models) => {

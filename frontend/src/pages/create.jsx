@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { FaUsers, FaLayerGroup, FaUser, FaStar, FaCog, FaHeart, FaUserCircle } from 'react-icons/fa'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { FaUsers, FaLayerGroup, FaUser, FaStar, FaCog, FaHeart, FaUserCircle } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 const features = [
   {
@@ -24,47 +24,30 @@ const features = [
     description: 'Manage your account settings and preferences.',
     to: "/settings"
   }
-]
-
-const rooms = [
-  {
-    id: 1,
-    name: 'React Devs',
-    username: 'john_doe',
-    followers: 150,
-    posts: 42,
-    rating: 4.5,
-    members: 30,
-    avatar: null
-  },
-  {
-    id: 2,
-    name: 'UI Designers',
-    username: 'jane_ui',
-    followers: 230,
-    posts: 65,
-    rating: 4.8,
-    members: 44,
-    avatar: "https://i.pravatar.cc/150?img=3"
-  },
-  {
-    id: 3,
-    name: 'Node Masters',
-    username: 'node_guy',
-    followers: 120,
-    posts: 35,
-    rating: 4.2,
-    members: 27,
-    avatar: null
-  }
-]
+];
 
 function CreatePage() {
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState("");
+  const [rooms, setRooms] = useState([]);
+
+  useEffect(() => {
+    // Fetch the logged-in user's TeamBoxes (or rooms) from the API
+    const fetchTeamBoxes = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/team-boxes'); // Adjust this URL as needed
+        const data = await response.json();
+        setRooms(data);
+      } catch (err) {
+        console.error('Error fetching team boxes:', err);
+      }
+    };
+
+    fetchTeamBoxes();
+  }, []);
 
   const filteredRooms = rooms.filter(room =>
     room.name.toLowerCase().includes(search.toLowerCase())
-  )
+  );
 
   return (
     <div className="p-6 bg-white dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100">
@@ -105,8 +88,8 @@ function CreatePage() {
               {room.avatar ? (
                 <img
                   src={room.avatar}
-                  alt={room.username}
                   className="w-10 h-10 rounded-full mr-3"
+                  onError={(e) => e.target.src = ""} // Remove image if error
                 />
               ) : (
                 <FaUserCircle className="text-4xl text-gray-400 mr-3" />
@@ -118,10 +101,18 @@ function CreatePage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3">
-              <p className="flex items-center"><FaHeart className="mr-2 text-red-500" /> {room.followers} followers</p>
-              <p className="flex items-center"><FaLayerGroup className="mr-2 text-green-600" /> {room.posts} posts</p>
-              <p className="flex items-center"><FaStar className="mr-2 text-yellow-500" /> Rating: {room.rating}</p>
-              <p className="flex items-center"><FaUsers className="mr-2 text-blue-500" /> {room.members} members</p>
+              <p className="flex items-center">
+                <FaHeart className="mr-2 text-red-500" /> {room.followers} followers
+              </p>
+              <p className="flex items-center">
+                <FaLayerGroup className="mr-2 text-green-600" /> {room.posts} posts
+              </p>
+              <p className="flex items-center">
+                <FaStar className="mr-2 text-yellow-500" /> Rating: {room.rating}
+              </p>
+              <p className="flex items-center">
+                <FaUsers className="mr-2 text-blue-500" /> {room.members} members
+              </p>
             </div>
 
             <Link
@@ -134,7 +125,7 @@ function CreatePage() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
-export default CreatePage
+export default CreatePage;

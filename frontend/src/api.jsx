@@ -8,7 +8,7 @@ export const signup = async (data) => {
   });
   return res.json();
 };
-// ../api.js
+
 export const createPost = async (data) => {
   try {
     const res = await fetch(`${API_BASE}/newpost`, {
@@ -20,6 +20,19 @@ export const createPost = async (data) => {
     return { error: 'Failed to create post.' };
   }
 };
+
+export const createTeamBox = async (formData) => {
+  try {
+    const res = await fetch(`${API_BASE}/team-boxes`, {
+      method: 'POST',
+      body: formData,
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: 'Failed to create team box.' };
+  }
+};
+
 
 
 export const login = async (data) => {

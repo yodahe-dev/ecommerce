@@ -16,6 +16,7 @@ import { FaSpinner, FaBars } from 'react-icons/fa';
 import CreatePage from './pages/create';
 import Postpage from './pages/createpost';
 import { getProfile } from './api';
+import CreateTeamBox from './pages/CreateTeamBox';
 
 function App() {
   const [token, setToken] = useState('');
@@ -124,6 +125,7 @@ function App() {
             <Route path="/rooms" element={<RoomProfile />} />
             <Route path="/create" element={<CreatePage />} />
             <Route path="/posts" element={<Postpage />} />
+            <Route path="/newroom" element={<CreateTeamBox/> }/>
 
             <Route
               path="/signup"

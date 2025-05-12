@@ -15,3 +15,15 @@ const auth = (req, res, next) => {
 };
 
 module.exports = auth;
+
+// middleware/auth.js
+const checkRole = (roles) => {
+  return (req, res, next) => {
+    if (roles.includes(req.user.role)) {
+      return next();
+    }
+    res.status(403).json({ error: 'Forbidden' });
+  };
+};
+
+module.exports = { checkRole };

@@ -1,51 +1,55 @@
 // src/App.jsx
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
-import Nav from './components/Nav';
-import Sidebar from './components/Sidebar';
-import RightSidebar from './components/RightSidebar';
-import Signup from './pages/Signup';
-import Login from './pages/Login';
-import Home from './pages/Home';
-import Profile from './pages/Profile';
-import Network from './pages/network';
-import RoomProfile from './pages/Rooms';
-import ProtectedRoute from './components/ProtectedRoute';
-import PublicOnlyRoute from './components/PublicOnlyRoute';
-import { FaSpinner, FaBars } from 'react-icons/fa';
-import CreatePage from './pages/create';
-import Postpage from './pages/createpost';
-import { getProfile } from './api';
-import CreateTeamBox from './pages/CreateTeamBox';
+import React, { useState, useEffect } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
+import ProtectedRoute from "./components/ProtectedRoute";
+import PublicOnlyRoute from "./components/PublicOnlyRoute";
+import Nav from "./components/Nav";
+import { FaSpinner } from "react-icons/fa";
+import { getProfile } from "./api";
+import ProductList from "./pages/users/ProductList";
+import CreateProduct from "./pages/seller/CreateProduct";
+import ProductUpdate from "./pages/seller/ProductUpdate"; // make sure this is the correct path
+import SellerProfile from './pages/seller/SellerProfile';
 
 function App() {
-  const [token, setToken] = useState('');
-  const [email, setEmail] = useState('');
+  const [token, setToken] = useState("");
+  const [email, setEmail] = useState("");
   const [darkMode, setDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedEmail = localStorage.getItem('email');
-    const theme = localStorage.getItem('theme');
-    if (storedToken) {
-      setToken(storedToken);
-      fetchAndSaveUserId(storedToken);
+    try {
+      const storedToken = localStorage.getItem("token");
+      const storedEmail = localStorage.getItem("email");
+      const theme = localStorage.getItem("theme");
+
+      if (storedToken) {
+        setToken(storedToken);
+        fetchAndSaveUserId(storedToken);
+      }
+
+      if (storedEmail) setEmail(storedEmail);
+      setDarkMode(theme === "dark");
+    } catch (err) {
+      console.error("App init failed", err);
+      setHasError(true);
+    } finally {
+      setIsLoading(false);
     }
-    if (storedEmail) setEmail(storedEmail);
-    if (theme === 'dark') setDarkMode(true);
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {
     if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [darkMode]);
 
@@ -53,29 +57,37 @@ function App() {
     try {
       const user = await getProfile(token);
       if (user?.id) {
-        localStorage.setItem('user_id', user.id);
+        localStorage.setItem("user_id", user.id);
       }
     } catch (err) {
-      console.error('Failed to fetch user ID', err);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_id');
+      console.error("Failed to fetch user ID", err);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user_id");
+      setToken("");
+      navigate("/login");
     }
   };
 
   const handleLogin = (newToken, newEmail) => {
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('email', newEmail);
-    setToken(newToken);
-    setEmail(newEmail);
-    fetchAndSaveUserId(newToken);
-    navigate('/');
+    try {
+      localStorage.setItem("token", newToken);
+      localStorage.setItem("email", newEmail);
+      setToken(newToken);
+      setEmail(newEmail);
+      fetchAndSaveUserId(newToken);
+      navigate("/");
+    } catch (err) {
+      console.error("Login failed", err);
+      setHasError(true);
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    setToken('');
-    setEmail('');
-    navigate('/login');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_id");
+    setToken("");
+    setEmail("");
+    navigate("/login");
   };
 
   if (isLoading) {
@@ -86,31 +98,18 @@ function App() {
     );
   }
 
-  return (
-    <div className={`flex h-screen ${darkMode ? 'dark' : ''}`}>
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="text-2xl p-2 bg-indigo-600 text-white rounded-md"
-        >
-          <FaBars />
-        </button>
+  if (hasError) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+        <p>Something went wrong. Please refresh the page.</p>
       </div>
+    );
+  }
 
-      {/* Sidebar */}
-      <Sidebar
-        onLogout={handleLogout}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-64 transition-all">
+  return (
+    <div className={`${darkMode ? "dark" : ""}`}>
+      <div className="">
         <Nav
-          token={token}
           isAuthenticated={!!token}
           userEmail={email}
           onLogout={handleLogout}
@@ -120,13 +119,6 @@ function App() {
 
         <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/network" element={<Network />} />
-            <Route path="/rooms" element={<RoomProfile />} />
-            <Route path="/create" element={<CreatePage />} />
-            <Route path="/posts" element={<Postpage />} />
-            <Route path="/newroom" element={<CreateTeamBox/> }/>
-
             <Route
               path="/signup"
               element={
@@ -144,21 +136,67 @@ function App() {
                 </PublicOnlyRoute>
               }
             />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute isAuthenticated={!!token}>
+                  <ProductList />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/upload"
+              element={
+                <ProtectedRoute isAuthenticated={!!token}>
+                  <CreateProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+  path="/seller/profile"
+  element={
+    <ProtectedRoute isAuthenticated={!!token}>
+      <SellerProfile />
+    </ProtectedRoute>
+  }
+/>
+
+
+            <Route
+              path="/products/:id/edit"
+              element={
+                <ProtectedRoute isAuthenticated={!!token}>
+                  <ProductUpdate />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/account"
               element={
                 <ProtectedRoute isAuthenticated={!!token}>
-                  <Profile token={token} darkMode={darkMode} setDarkMode={setDarkMode} />
+                  <Profile
+                    token={token}
+                    darkMode={darkMode}
+                    setDarkMode={setDarkMode}
+                  />
                 </ProtectedRoute>
+              }
+            />
+
+            {/* 404 fallback */}
+            <Route
+              path="*"
+              element={
+                <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
+                  <p>404 - Page Not Found</p>
+                </div>
               }
             />
           </Routes>
         </main>
       </div>
-
-      {/* Right Sidebar */}
-      <RightSidebar darkMode={darkMode} width="w-96" className="hidden lg:flex" />
     </div>
   );
 }

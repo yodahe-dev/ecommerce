@@ -53,7 +53,7 @@ async function sendEmail(email, otp) {
 }
 
 function generateCode() {
-  return Math.floor(100000 + Math.random() * 900000);
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 router.post('/signup', async (req, res) => {
@@ -68,40 +68,33 @@ router.post('/signup', async (req, res) => {
 
   try {
     const role = await Role.findOne({ where: { name: process.env.DEFAULT_ROLE } });
-    if (!role) {
-      return res.status(500).json({ error: 'Default role not found' });
-    }
+    if (!role) return res.status(500).json({ error: 'Default role not found' });
 
     const user = await User.create({ username, email, password: hash, roleId: role.id });
 
     const otp = generateCode();
-    user.verificationCode = otp;
-    await user.save();
+    await user.update({ verificationCode: otp });
 
     await sendEmail(email, otp);
 
     res.status(201).json({ message: 'Signup successful! Please check your email to verify.' });
   } catch (err) {
-    res.status(400).json({ error: 'User already exists' });
+    res.status(400).json({ error: 'User already exists or invalid data' });
   }
-}); 
+});
 
 router.post('/verify', async (req, res) => {
   const { email, otp } = req.body;
 
   try {
     const user = await User.findOne({ where: { email } });
-
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (user.verificationCode !== otp) {
       return res.status(400).json({ error: 'Invalid OTP' });
     }
 
-    user.isVerified = true;
-    user.verificationCode = null;
-    await user.save();
-
+    await user.update({ isVerified: true, verificationCode: null });
     res.json({ message: 'User verified successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -118,19 +111,20 @@ router.post('/login', loginLimiter, async (req, res) => {
   if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
 
   if (!user.isVerified) {
-    user.verificationCode = null;
-    await user.save();
-
     const otp = generateCode();
-    user.verificationCode = otp;
-    await user.save();
+    await user.update({ verificationCode: otp });
 
     await sendEmail(user.email, otp);
 
-    return res.status(400).json({ error: 'Please verify your email first. A new verification code has been sent.' });
+    return res.status(400).json({ error: 'Please verify your email first. A new code has been sent.' });
   }
 
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+  const token = jwt.sign(
+    { id: user.id, username: user.username, role: user.roleId },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
   res.json({ token });
 });
 
@@ -139,13 +133,11 @@ router.post('/resend', async (req, res) => {
 
   try {
     const user = await User.findOne({ where: { email } });
-
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.isVerified) return res.status(400).json({ error: 'User is already verified' });
 
     const otp = generateCode();
-    user.verificationCode = otp;
-    await user.save();
+    await user.update({ verificationCode: otp });
 
     await sendEmail(email, otp);
 
@@ -156,17 +148,23 @@ router.post('/resend', async (req, res) => {
 });
 
 router.post('/enable-2fa', async (req, res) => {
-  const user = await User.findOne({ where: { email: req.body.email } });
+  const { email } = req.body;
+  const user = await User.findOne({ where: { email } });
+
+  if (!user) return res.status(404).json({ error: 'User not found' });
 
   const secret = speakeasy.generateSecret({ length: 20 });
-  const otpauthUrl = speakeasy.otpauthURL({ secret: secret.ascii, label: user.email, algorithm: 'sha512' });
+  const otpauthUrl = speakeasy.otpauthURL({
+    secret: secret.ascii,
+    label: user.email,
+    algorithm: 'sha512',
+  });
 
-  QRCode.toDataURL(otpauthUrl, (err, data_url) => {
-    if (err) {
-      return res.status(500).json({ error: 'Error generating QR code' });
-    }
-    user.twoFactorSecret = secret.base32;
-    user.save();
+  QRCode.toDataURL(otpauthUrl, async (err, data_url) => {
+    if (err) return res.status(500).json({ error: 'Error generating QR code' });
+
+    await user.update({ twoFactorSecret: secret.base32 });
+
     res.json({ message: 'QR code generated', qrCodeUrl: data_url });
   });
 });
@@ -174,6 +172,8 @@ router.post('/enable-2fa', async (req, res) => {
 router.post('/verify-2fa', async (req, res) => {
   const { email, token } = req.body;
   const user = await User.findOne({ where: { email } });
+
+  if (!user) return res.status(404).json({ error: 'User not found' });
 
   const verified = speakeasy.totp.verify({
     secret: user.twoFactorSecret,

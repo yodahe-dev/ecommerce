@@ -1,23 +1,27 @@
+// server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { sequelize } = require('./models');
 const authRoutes = require('./routes/auth');
-const postRoutes = require('./routes/post')
-const teamBoxRoutes = require('./routes/teamBox');
+const productRoutes = require('./routes/product'); // Import product routes
+
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true,
+}));
+
 app.use(helmet());
 app.use(express.json());
+app.use('/api', authRoutes);
+app.use('/api', productRoutes); 
 
-app.use('/api', authRoutes); // user auth api
-app.use('/api', postRoutes); // post CRUD api
-app.use('/api', teamBoxRoutes);
-
+const PORT = process.env.PORT || 5000;
 sequelize.sync().then(() => {
-  app.listen(5000, () => {
-    console.log('Server running on port 5000');
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 });

@@ -1,56 +1,26 @@
-const { Product, User, Role } = require('../../models');
+const { Product } = require('../../models');
 
 module.exports = async (req, res) => {
-  const { 
-    name, description, price, quantity,
-    imageUrl, isDiscounted, lastPrice, currentPrice,
-    userId 
-  } = req.body;
-  const productId = req.params.id;
-
-  if (!userId) {
-    return res.status(400).json({ message: "User must log in" });
-  }
+  const id = req.params.id;
+  const { name, description, price, quantity } = req.body;
 
   try {
-    // find user and role
-    const user = await User.findOne({
-      where: { id: userId },
-      include: [{ model: Role, as: 'role', attributes: ['name'] }]
-    });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    const product = await Product.findByPk(id);
 
-    const allowedRoles = ['seller', 'admin', 'manager'];
-    const userRole = user.role?.name;
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ message: "Not allowed to update products" });
-    }
-
-    // find product
-    const product = await Product.findByPk(productId);
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ message: 'Product not found' });
     }
 
-    // if seller, ensure they own it
-    if (userRole === 'seller' && product.userId !== userId) {
-      return res.status(403).json({ message: "You can only update your own products" });
-    }
+    product.name = name || product.name;
+    product.description = description || product.description;
+    product.price = price || product.price;
+    product.quantity = quantity || product.quantity;
 
-    // update fields
-    await product.update({
-      name, description, price, quantity,
-      imageUrl, isDiscounted, lastPrice, currentPrice
-    });
+    await product.save();
 
-    return res.json(product);
+    res.status(200).json({ message: 'Product updated', product });
   } catch (err) {
-    console.error('Update product failed:', err);
-    return res.status(500).json({
-      message: 'Internal server error. Failed to update product.',
-      error: err.message
-    });
+    console.error('Update error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };

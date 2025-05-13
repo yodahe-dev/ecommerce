@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Dialog } from '@headlessui/react'; // optional, for accessibility
 
 const API = 'http://localhost:5000/api';
 
 export default function SellerProfile() {
   const [seller, setSeller] = useState(null);
   const [products, setProducts] = useState([]);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', quantity: '' });
   const [error, setError] = useState('');
   const userId = localStorage.getItem('user_id');
   const token = localStorage.getItem('token');
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchSellerData = async () => {
@@ -27,8 +28,36 @@ export default function SellerProfile() {
     if (userId) fetchSellerData();
   }, [userId]);
 
-  const handleEdit = (productId) => {
-    navigate(`/products/${productId}/edit`);
+  const openEdit = (product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      quantity: product.quantity,
+    });
+  };
+
+  const closeEdit = () => {
+    setEditingProduct(null);
+    setFormData({ name: '', description: '', price: '', quantity: '' });
+  };
+
+  const handleUpdate = async () => {
+    try {
+      const res = await axios.put(`${API}/products/${editingProduct.id}`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const updatedProduct = res.data.product;
+      setProducts((prev) =>
+        prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+      );
+      closeEdit();
+    } catch (err) {
+      console.error('Update failed', err);
+      alert('Failed to update product.');
+    }
   };
 
   const handleDelete = async (productId) => {
@@ -36,9 +65,8 @@ export default function SellerProfile() {
 
     try {
       await axios.delete(`${API}/products/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       setProducts((prev) => prev.filter((p) => p.id !== productId));
     } catch (err) {
       console.error('Delete failed', err);
@@ -60,33 +88,83 @@ export default function SellerProfile() {
       <hr className="my-4" />
 
       <h3 className="text-xl font-semibold mb-2">Your Products</h3>
-      {products.length === 0 ? (
-        <p>You haven't listed any products yet.</p>
-      ) : (
-        <ul className="space-y-2">
-          {products.map((product) => (
-            <li key={product.id} className="border p-3 rounded bg-gray-50 dark:bg-gray-800">
-              <p className="font-medium">{product.name}</p>
-              <p className="text-sm text-gray-600">Price: ${product.price}</p>
-              <p className="text-sm text-gray-600">Quantity: {product.quantity}</p>
+      <ul className="space-y-2">
+        {products.map((product) => (
+          <li key={product.id} className="border p-3 rounded bg-gray-50 dark:bg-gray-800">
+            <p className="font-medium">{product.name}</p>
+            <p className="text-sm text-gray-600">Price: ${product.price}</p>
+            <p className="text-sm text-gray-600">Quantity: {product.quantity}</p>
 
-              <div className="flex gap-2 mt-2">
-                <button
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-                  onClick={() => handleEdit(product.id)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                  onClick={() => handleDelete(product.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+            <div className="flex gap-2 mt-2">
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+                onClick={() => openEdit(product)}
+              >
+                Edit
+              </button>
+              <button
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                onClick={() => handleDelete(product.id)}
+              >
+                Delete
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Edit Popover Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Edit Product</h2>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Product name"
+                className="w-full p-2 border rounded bg-gray-100 dark:bg-gray-800"
+              />
+              <input
+                type="text"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Description"
+                className="w-full p-2 border rounded bg-gray-100 dark:bg-gray-800"
+              />
+              <input
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder="Price"
+                className="w-full p-2 border rounded bg-gray-100 dark:bg-gray-800"
+              />
+              <input
+                type="number"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                placeholder="Quantity"
+                className="w-full p-2 border rounded bg-gray-100 dark:bg-gray-800"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1 rounded"
+                onClick={closeEdit}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded"
+                onClick={handleUpdate}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

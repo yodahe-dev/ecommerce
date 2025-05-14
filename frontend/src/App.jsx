@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import Signup from "./pages/Signup";
@@ -9,10 +8,8 @@ import PublicOnlyRoute from "./components/PublicOnlyRoute";
 import Nav from "./components/Nav";
 import { FaSpinner } from "react-icons/fa";
 import { getProfile } from "./api";
-import ProductList from "./pages/users/ProductList";
 import CreateProduct from "./pages/seller/CreateProduct";
-import ProductUpdate from "./pages/seller/ProductUpdate"; // make sure this is the correct path
-import SellerProfile from './pages/seller/SellerProfile';
+import SellerProfile from "./pages/seller/SellerProfile";
 
 function App() {
   const [token, setToken] = useState("");
@@ -136,14 +133,6 @@ function App() {
                 </PublicOnlyRoute>
               }
             />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute isAuthenticated={!!token}>
-                  <ProductList />
-                </ProtectedRoute>
-              }
-            />
 
             <Route
               path="/upload"
@@ -154,23 +143,15 @@ function App() {
               }
             />
             <Route
-  path="/seller/profile"
-  element={
-    <ProtectedRoute isAuthenticated={!!token}>
-      <SellerProfile />
-    </ProtectedRoute>
-  }
-/>
-
-
-            <Route
-              path="/products/:id/edit"
+              path="/seller/profile"
               element={
                 <ProtectedRoute isAuthenticated={!!token}>
-                  <ProductUpdate />
+                  <SellerProfile />
                 </ProtectedRoute>
               }
             />
+
+            
 
             <Route
               path="/account"

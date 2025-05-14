@@ -10,21 +10,23 @@ export default function ProductCreate() {
     description: '',
     price: '',
     quantity: '',
-    imageUrl: '',
-    isDiscounted: false,
     lastPrice: '',
-    currentPrice: '',
   });
 
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
     }));
+  };
+
+  const handleImageChange = (e) => {
+    setImage(e.target.files[0]);
   };
 
   const handleSubmit = async (e) => {
@@ -36,22 +38,32 @@ export default function ProductCreate() {
       return navigate('/login');
     }
 
-    const productData = { ...form, userId };
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('description', form.description);
+    formData.append('price', parseFloat(form.price));
+    formData.append('quantity', parseInt(form.quantity, 10));
+    formData.append('lastPrice', form.lastPrice ? parseFloat(form.lastPrice) : '');
+    formData.append('userId', userId);
+
+    if (image) {
+      formData.append('image', image);
+    }
 
     try {
       setLoading(true);
-      const res = await axios.post(`${API}/products`, productData);
+      await axios.post(`${API}/products`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       alert('Product created successfully!');
       setForm({
         name: '',
         description: '',
         price: '',
         quantity: '',
-        imageUrl: '',
-        isDiscounted: false,
         lastPrice: '',
-        currentPrice: '',
       });
+      setImage(null);
     } catch (err) {
       console.error('Product create failed:', err);
       const message = err.response?.data?.message || 'Something went wrong.';
@@ -65,7 +77,7 @@ export default function ProductCreate() {
     <div className="p-6 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Create New Product</h1>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
-        {/* Name */}
+
         <input
           type="text"
           name="name"
@@ -76,7 +88,6 @@ export default function ProductCreate() {
           required
         />
 
-        {/* Description */}
         <textarea
           name="description"
           value={form.description}
@@ -86,7 +97,6 @@ export default function ProductCreate() {
           required
         />
 
-        {/* Price */}
         <input
           type="number"
           name="price"
@@ -97,7 +107,6 @@ export default function ProductCreate() {
           required
         />
 
-        {/* Quantity */}
         <input
           type="number"
           name="quantity"
@@ -108,47 +117,20 @@ export default function ProductCreate() {
           required
         />
 
-        {/* Image URL */}
         <input
-          type="text"
-          name="imageUrl"
-          value={form.imageUrl}
-          onChange={handleChange}
-          placeholder="Image URL"
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
           className="p-2 border rounded"
         />
 
-        {/* Is Discounted */}
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            name="isDiscounted"
-            checked={form.isDiscounted}
-            onChange={handleChange}
-            className="mr-2"
-          />
-          Discounted?
-        </label>
-
-        {/* Last Price */}
         <input
           type="number"
           name="lastPrice"
           value={form.lastPrice}
           onChange={handleChange}
-          placeholder="Last Price"
+          placeholder="Last Price (optional)"
           className="p-2 border rounded"
-        />
-
-        {/* Current Price */}
-        <input
-          type="number"
-          name="currentPrice"
-          value={form.currentPrice}
-          onChange={handleChange}
-          placeholder="Current Price"
-          className="p-2 border rounded"
-          required
         />
 
         <button

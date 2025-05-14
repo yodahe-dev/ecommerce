@@ -10,6 +10,7 @@ import { FaSpinner } from "react-icons/fa";
 import { getProfile } from "./api";
 import CreateProduct from "./pages/seller/CreateProduct";
 import SellerProfile from "./pages/seller/SellerProfile";
+import Home from "./pages/users/Home";
 
 function App() {
   const [token, setToken] = useState("");
@@ -143,10 +144,19 @@ function App() {
               }
             />
             <Route
-              path="/seller/profile"
+              path="/dashboard"
               element={
                 <ProtectedRoute isAuthenticated={!!token}>
                   <SellerProfile />
+                </ProtectedRoute>
+              }
+            />
+
+             <Route
+              path="/"
+              element={
+                <ProtectedRoute isAuthenticated={!!token}>
+                  <Home/>
                 </ProtectedRoute>
               }
             />

@@ -1,5 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Product = sequelize.define('Product', {
+        id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -10,10 +15,6 @@ module.exports = (sequelize, DataTypes) => {
     },
     price: {
       type: DataTypes.FLOAT,
-      allowNull: false,
-    },
-    quantity: {
-      type: DataTypes.INTEGER,
       allowNull: false,
     },
     userId: {
@@ -28,21 +29,9 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    isDiscounted: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
     lastPrice: {
       type: DataTypes.FLOAT,
       allowNull: true,
-    },
-    currentPrice: {
-      type: DataTypes.FLOAT,
-      allowNull: false,
-    },
-    isSold: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
     },
   }, {
     timestamps: true,

@@ -11,42 +11,54 @@ import { getProfile } from "./api";
 import CreateProduct from "./pages/seller/CreateProduct";
 import SellerProfile from "./pages/seller/SellerProfile";
 import Home from "./pages/users/Home";
+import Catagory from "./pages/users/Catagory";
+import About from "./pages/users/About";
+import Search from "./pages/users/Search";
 
 function App() {
   const [token, setToken] = useState("");
   const [email, setEmail] = useState("");
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(true); // default to dark
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem("token");
-      const storedEmail = localStorage.getItem("email");
-      const theme = localStorage.getItem("theme");
+    const init = async () => {
+      try {
+        const storedToken = localStorage.getItem("token");
+        const storedEmail = localStorage.getItem("email");
+        const theme = localStorage.getItem("theme");
 
-      if (storedToken) {
-        setToken(storedToken);
-        fetchAndSaveUserId(storedToken);
+        if (storedToken) {
+          setToken(storedToken);
+          await fetchAndSaveUserId(storedToken);
+        }
+
+        if (storedEmail) setEmail(storedEmail);
+
+        // force dark if no theme in localStorage
+        setDarkMode(theme ? theme === "dark" : true);
+      } catch (err) {
+        console.error("App init failed", err);
+        setHasError(true);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      if (storedEmail) setEmail(storedEmail);
-      setDarkMode(theme === "dark");
-    } catch (err) {
-      console.error("App init failed", err);
-      setHasError(true);
-    } finally {
-      setIsLoading(false);
-    }
+    init();
   }, []);
 
   useEffect(() => {
+    const themeClass = "dark";
+    const root = document.documentElement;
+
     if (darkMode) {
-      document.documentElement.classList.add("dark");
+      root.classList.add(themeClass);
       localStorage.setItem("theme", "dark");
     } else {
-      document.documentElement.classList.remove("dark");
+      root.classList.remove(themeClass);
       localStorage.setItem("theme", "light");
     }
   }, [darkMode]);
@@ -58,7 +70,7 @@ function App() {
         localStorage.setItem("user_id", user.id);
       }
     } catch (err) {
-      console.error("Failed to fetch user ID", err);
+      console.error("Fetch user failed", err);
       localStorage.removeItem("token");
       localStorage.removeItem("user_id");
       setToken("");
@@ -66,13 +78,13 @@ function App() {
     }
   };
 
-  const handleLogin = (newToken, newEmail) => {
+  const handleLogin = async (newToken, newEmail) => {
     try {
       localStorage.setItem("token", newToken);
       localStorage.setItem("email", newEmail);
       setToken(newToken);
       setEmail(newEmail);
-      fetchAndSaveUserId(newToken);
+      await fetchAndSaveUserId(newToken);
       navigate("/");
     } catch (err) {
       console.error("Login failed", err);
@@ -105,89 +117,75 @@ function App() {
   }
 
   return (
-    <div className={`${darkMode ? "dark" : ""}`}>
-      <div className="">
-        <Nav
-          isAuthenticated={!!token}
-          userEmail={email}
-          onLogout={handleLogout}
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-        />
+    <div className={darkMode ? "dark" : ""}>
+      <Nav
+        isAuthenticated={!!token}
+        userEmail={email}
+        onLogout={handleLogout}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
 
-        <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-          <Routes>
-            <Route
-              path="/signup"
-              element={
-                <PublicOnlyRoute isAuthenticated={!!token}>
-                  <Signup />
-                </PublicOnlyRoute>
-              }
-            />
-
-            <Route
-              path="/login"
-              element={
-                <PublicOnlyRoute isAuthenticated={!!token}>
-                  <Login onLogin={handleLogin} />
-                </PublicOnlyRoute>
-              }
-            />
-
-            <Route
-              path="/upload"
-              element={
-                <ProtectedRoute isAuthenticated={!!token}>
-                  <CreateProduct />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute isAuthenticated={!!token}>
-                  <SellerProfile />
-                </ProtectedRoute>
-              }
-            />
-
-             <Route
-              path="/"
-              element={
-                <ProtectedRoute isAuthenticated={!!token}>
-                  <Home/>
-                </ProtectedRoute>
-              }
-            />
-
-            
-
-            <Route
-              path="/account"
-              element={
-                <ProtectedRoute isAuthenticated={!!token}>
-                  <Profile
-                    token={token}
-                    darkMode={darkMode}
-                    setDarkMode={setDarkMode}
-                  />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* 404 fallback */}
-            <Route
-              path="*"
-              element={
-                <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-                  <p>404 - Page Not Found</p>
-                </div>
-              }
-            />
-          </Routes>
-        </main>
-      </div>
+      <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+        <Routes>
+          <Route
+            path="/signup"
+            element={
+              <PublicOnlyRoute isAuthenticated={!!token}>
+                <Signup />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute isAuthenticated={!!token}>
+                <Login onLogin={handleLogin} />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute isAuthenticated={!!token}>
+                <CreateProduct />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute isAuthenticated={!!token}>
+                <SellerProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<Home />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/catagory" element={<Catagory />} />
+          <Route path="/about" element={<About />} />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute isAuthenticated={!!token}>
+                <Profile
+                  token={token}
+                  darkMode={darkMode}
+                  setDarkMode={setDarkMode}
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
+                <p>404 - Page Not Found</p>
+              </div>
+            }
+          />
+        </Routes>
+      </main>
     </div>
   );
 }

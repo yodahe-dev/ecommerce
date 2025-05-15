@@ -80,14 +80,6 @@ export default function Profile({ token, darkMode, setDarkMode }) {
 
           <div className="flex gap-3">
             <button
-              onClick={toggleFollow}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                following ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200' : 'bg-indigo-600 text-white hover:bg-indigo-700'
-              }`}
-            >
-              {following ? 'Unfollow' : 'Follow'}
-            </button>
-            <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
             >
@@ -96,67 +88,9 @@ export default function Profile({ token, darkMode, setDarkMode }) {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-8">
-          {[
-            ['Posts', 12],
-            ['Followers', 20],
-            ['Following', 10],
-            ['Rooms', 3],
-          ].map(([label, value]) => (
-            <div key={label} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-              <p className="text-xl font-semibold text-indigo-600">{value}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
-            </div>
-          ))}
-        </div>
+        
 
-        {/* Tabs */}
-        <div className="flex gap-6 border-b border-gray-200 dark:border-gray-700 mb-6">
-          {['posts', 'rooms', 'collabs', 'followers'].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`pb-2 text-sm font-medium ${
-                tab === t
-                  ? 'border-b-2 border-indigo-600 text-indigo-600'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-indigo-500'
-              }`}
-            >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
 
-        {/* Content */}
-        <div>
-          {tab === 'posts' && (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[{ title: 'First Post', content: 'Post content here', createdAt: '2025-05-01' }].map((post) => (
-                <div key={post.title} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-lg transition-transform transform hover:scale-105">
-                  <h3 className="font-bold text-lg text-gray-800 dark:text-white">{post.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 mt-2">{post.content}</p>
-                  <p className="text-xs text-gray-400 mt-4">{new Date(post.createdAt).toLocaleDateString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {tab === 'rooms' && <div>No joined rooms yet.</div>}
-
-          {tab === 'collabs' && <p>Collaboration feature coming soon.</p>}
-
-          {tab === 'followers' && (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[{ username: 'follower1', email: 'follower1@example.com' }].map((follower) => (
-                <div key={follower.username} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-                  <h5 className="font-medium text-gray-800 dark:text-white">{follower.username}</h5>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{follower.email}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

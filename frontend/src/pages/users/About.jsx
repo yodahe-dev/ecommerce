@@ -1,9 +1,9 @@
 import React from 'react'
 
-export default function Catagory() {
+export default function About() {
   return (
     <div className='h-screen'>
-      Your, on catagory
+       Your, on About
     </div>
   )
 }

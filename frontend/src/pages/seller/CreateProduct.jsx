@@ -2,9 +2,9 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API = 'http://localhost:5000/api';
+const API = 'http://localhost:5000/api';  // Update your API base URL if needed
 
-export default function ProductCreate() {
+export default function CreateProduct() {
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -32,10 +32,10 @@ export default function ProductCreate() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const userId = localStorage.getItem('user_id');
-    if (!userId) {
+    const token = localStorage.getItem('token');
+    if (!token) {
       alert('You must log in first.');
-      return navigate('/login');
+      return navigate('/login'); // Redirect to login if no token
     }
 
     const formData = new FormData();
@@ -44,17 +44,24 @@ export default function ProductCreate() {
     formData.append('price', parseFloat(form.price));
     formData.append('quantity', parseInt(form.quantity, 10));
     formData.append('lastPrice', form.lastPrice ? parseFloat(form.lastPrice) : '');
-    formData.append('userId', userId);
-
+    
+    // Append image to formData if available
     if (image) {
       formData.append('image', image);
     }
 
     try {
       setLoading(true);
-      await axios.post(`${API}/products`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await axios.post(
+        `${API}/products`,
+        formData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
       alert('Product created successfully!');
       setForm({
         name: '',
@@ -78,6 +85,7 @@ export default function ProductCreate() {
       <h1 className="text-2xl font-bold mb-4">Create New Product</h1>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
 
+        {/* Product Name */}
         <input
           type="text"
           name="name"
@@ -88,6 +96,7 @@ export default function ProductCreate() {
           required
         />
 
+        {/* Product Description */}
         <textarea
           name="description"
           value={form.description}
@@ -97,6 +106,7 @@ export default function ProductCreate() {
           required
         />
 
+        {/* Product Price */}
         <input
           type="number"
           name="price"
@@ -107,6 +117,7 @@ export default function ProductCreate() {
           required
         />
 
+        {/* Product Quantity */}
         <input
           type="number"
           name="quantity"
@@ -117,6 +128,7 @@ export default function ProductCreate() {
           required
         />
 
+        {/* Image Upload */}
         <input
           type="file"
           accept="image/*"
@@ -124,6 +136,7 @@ export default function ProductCreate() {
           className="p-2 border rounded"
         />
 
+        {/* Last Price (Optional) */}
         <input
           type="number"
           name="lastPrice"
@@ -133,6 +146,7 @@ export default function ProductCreate() {
           className="p-2 border rounded"
         />
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading}

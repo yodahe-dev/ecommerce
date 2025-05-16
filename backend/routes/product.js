@@ -5,13 +5,16 @@ const { product } = require('../models');
 const createProduct = require('../controllers/Product/create');
 const updateProduct = require('../controllers/Product/update');
 const deleteProduct = require('../controllers/Product/delete');
-const readProduct = require('../controllers/product/read');
+const readProduct = require('../controllers/Product/read');
 
-router.get('/products', readProduct.getAll);//list for all products for all users
-router.get('/products/seller/:sellerId', readProduct.getBySeller);
+const upload = require('../middlewares/upload'); // add this
 
+// Product routes
+router.get('/products', readProduct.getAll); // All products
+router.get('/products/seller/:sellerId', readProduct.getBySeller); // Products by seller
 
-router.post('/products', createProduct);
+router.post('/products', upload.single('image'), createProduct); // 🔁 updated for image upload
+
 router.put('/products/:id', updateProduct);
 router.delete('/products/:id', deleteProduct);
 

@@ -5,7 +5,7 @@ export default function Hero() {
   return (
     <div className="relative flex flex-col-reverse lg:flex-row items-center justify-between 
                     bg-white dark:bg-slate-800 overflow-hidden 
-                    min-h-[420px] max-h-[600px] px-6 py-10 lg:px-16 lg:py-16">
+                    min-h-[300px] max-h-[100px] px-6 py-10 lg:px-16 lg:py-16">
       
       {/* Left: Content */}
       <div className="lg:w-1/2 space-y-5 text-center lg:text-left">
@@ -43,7 +43,7 @@ export default function Hero() {
         <img
           src={Img}
           alt="Marketplace"
-          className="w-full max-w-md mx-auto rounded-xl shadow-md object-cover"
+          className="w-full max-w-md mx-auto shadow-md object-cover"
         />
       </div>
     </div>

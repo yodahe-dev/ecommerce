@@ -1,34 +1,35 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaStar } from "react-icons/fa";
-import Img from "../assets/for.jpg";
+import axios from "axios";
 
-const products = [
-  {
-    id: 1,
-    name: "Samsung Galaxy S21",
-    price: 1000,
-    rate: 4.8,
-    img: Img,
-    totalBuyer: 10,
-  },
-];
+const API = "http://localhost:5000/api";
 
 export default function Card() {
+  const [products, setProducts] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    axios.get(`${API}/products`)
+      .then(res => {
+        setProducts(res.data);
+      })
+      .catch(err => {
+        console.error("Error fetching products:", err);
+      });
+  }, []);
 
   const handleDetails = (id) => {
     navigate(`/product/${id}`);
   };
 
   const handleAddToCart = (e, product) => {
-    e.stopPropagation(); // prevent routing when button is clicked
-    // Add to cart logic here
+    e.stopPropagation();
     console.log("Added to cart:", product);
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6">
+    <div className="flex flex-wrap gap-5 justify-center">
       {products.map((product) => (
         <div
           key={product.id}
@@ -38,7 +39,7 @@ export default function Card() {
           style={{ width: "100%", maxWidth: "320px" }}
         >
           <img
-            src={product.img}
+            src={product.imageUrl || '/assets/default-image.png'}
             alt={product.name}
             className="h-64 w-full object-cover"
           />
@@ -48,13 +49,24 @@ export default function Card() {
               {product.name}
             </h2>
 
-            <p className="text-orange-500 text-lg font-bold">
-              ${product.price}
-            </p>
+            {product.lastPrice ? (
+              <div className="flex flex-col">
+                <span className="text-gray-500 line-through text-sm">
+                  {product.lastPrice} ETB
+                </span>
+                <span className="text-orange-500 text-lg font-bold">
+                  {product.price} ETB
+                </span>
+              </div>
+            ) : (
+              <p className="text-orange-500 text-lg font-bold">
+                {product.price} ETB
+              </p>
+            )}
 
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
               <FaStar className="text-yellow-400 mr-1" />
-              {product.rate} ({product.totalBuyer} buyers)
+              4.5 (20 buyers)
             </div>
 
             <button
@@ -63,6 +75,14 @@ export default function Card() {
                          hover:bg-orange-600 transition text-sm font-medium"
             >
               Add to Cart
+            </button>
+
+            <button
+              onClick={() => handleDetails(product.id)}
+              className="mt-3 px-4 py-2 text-orange-500 rounded-lg border-gray-500 
+                         transition text-sm font-medium"
+            >
+              View details
             </button>
           </div>
         </div>

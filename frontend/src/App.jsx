@@ -14,6 +14,7 @@ import Home from "./pages/users/Home";
 import Catagory from "./pages/users/Catagory";
 import About from "./pages/users/About";
 import Search from "./pages/users/Search";
+import Cart from "./pages/users/myCart";
 
 function App() {
   const [token, setToken] = useState("");
@@ -128,6 +129,8 @@ function App() {
 
       <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
         <Routes>
+
+          {/* For Those Not Auth users */}
           <Route
             path="/signup"
             element={
@@ -144,6 +147,8 @@ function App() {
               </PublicOnlyRoute>
             }
           />
+
+          {/* seller role only can accessece this */}
           <Route
             path="/upload"
             element={
@@ -160,27 +165,23 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/catagory" element={<Catagory />} />
-          <Route path="/about" element={<About />} />
-          <Route
-            path="/account"
-            element={
+          <Route path="/category" element={<Catagory />} />
+          <Route path="/about" element={<About />} />                    
+          <Route path="/cart" element={<Cart />} />
+
+            {/* users for those auth users */}
+          <Route path="/account" element={
               <ProtectedRoute isAuthenticated={!!token}>
-                <Profile
-                  token={token}
-                  darkMode={darkMode}
-                  setDarkMode={setDarkMode}
-                />
+                <Profile token={token} darkMode={darkMode} setDarkMode={setDarkMode} />
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-                <p>404 - Page Not Found</p>
+            } />
+          <Route path="*" element={
+             <div className="flex flex-col justify-center text-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
+                <p className="text-3xl">404 - Page Not Found </p><br />
+                <p className="font-extrabold text-9xl"> 😒</p>
               </div>
             }
           />

@@ -1,9 +1,9 @@
 import React from 'react'
 
-export default function Search() {
+export default function myCart() {
   return (
     <div className='h-screen'>
-      This is Search page 
+        This is your cart
     </div>
   )
 }

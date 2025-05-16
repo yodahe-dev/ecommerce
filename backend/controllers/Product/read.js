@@ -4,8 +4,16 @@ module.exports = {
   getAll: async (req, res) => {
     try {
       const products = await Product.findAll({
-        include: [{ model: User, attributes: ['username', 'email'] }],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['username', 'email'],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
       });
+
       res.json(products);
     } catch (err) {
       console.error('Error getting products:', err);

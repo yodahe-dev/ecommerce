@@ -113,48 +113,57 @@ export default function Nav({
             </button>
           </div>
 
-          {/* Profile Always Visible */}
-          {isAuthenticated && (
-            <div className="ml-4 relative" ref={dropdownRef}>
-              <button
-                onClick={() => setIsDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                  <FaUserAlt className="text-white text-sm" />
-                </div>
-                <FaChevronDown
-                  className={`text-gray-700 dark:text-white transition-transform ${
-                    isDropdownOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+          {/* Profile or Sign In (Always Visible) */}
+          <div className="ml-4 relative" ref={dropdownRef}>
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
+                    <FaUserAlt className="text-white text-sm" />
+                  </div>
+                  <FaChevronDown
+                    className={`text-gray-700 dark:text-white transition-transform ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-              <AnimatePresence>
-                {isDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 z-50"
-                  >
-                    <Link
-                      to="/account"
-                      className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 z-10"
                     >
-                      <FaCog /> Profile
-                    </Link>
-                    <button
-                      onClick={onLogout}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900"
-                    >
-                      <FaSignOutAlt /> Log Out
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
+                      <Link
+                        to="/account"
+                        className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <FaCog /> Profile
+                      </Link>
+                      <button
+                        onClick={onLogout}
+                        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:text-gray-50 dark:hover:bg-red-900"
+                      >
+                        <FaSignOutAlt /> Log Out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="px-4 py-2 text-sm rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition"
+              >
+                Sign In
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Mobile Nav Links */}

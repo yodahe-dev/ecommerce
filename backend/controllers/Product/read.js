@@ -8,7 +8,7 @@ const formatProduct = (product) => ({
   price: product.price,
   lastPrice: product.lastPrice,
   imageUrl: product.imageUrl,
-  createdAt: product.createdAt,
+  createdAt: product.createdAt, // 'YYYY-MM-DD HH:mm:ss' string
   updatedAt: product.updatedAt,
   seller: {
     username: product.user?.username,
@@ -22,7 +22,6 @@ module.exports = {
     try {
       const { search = '', sortBy = 'createdAt', order = 'DESC', limit, offset } = req.query;
 
-      // If search term exists, search in name OR description (case insensitive)
       const where =
         search.trim() !== ''
           ? {
@@ -37,7 +36,6 @@ module.exports = {
             }
           : {};
 
-      // Optionally add limit and offset for pagination
       const queryOptions = {
         where,
         include: [

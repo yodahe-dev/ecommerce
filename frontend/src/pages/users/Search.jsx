@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 import Fuse from 'fuse.js';
@@ -16,7 +16,6 @@ export default function Search() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Optimized fetch with abort controller
   const fetchProducts = useCallback(
     debounce(async (query, sort) => {
       const abortController = new AbortController();
@@ -27,12 +26,10 @@ export default function Search() {
           sortBy: sort.includes('price') ? 'price' : 'createdAt',
           order: sort.includes('asc') ? 'ASC' : 'DESC',
         };
-        
-        const { data } = await axios.get(`${API}/products`, { 
+        const { data } = await axios.get(`${API}/products`, {
           params,
-          signal: abortController.signal 
+          signal: abortController.signal,
         });
-        
         setProducts(data);
         setError('');
       } catch (err) {
@@ -47,11 +44,10 @@ export default function Search() {
     []
   );
 
-  // Memoized fuzzy search
   const fuse = new Fuse([], {
     keys: ['name', 'description'],
     threshold: 0.3,
-    includeScore: true
+    includeScore: true,
   });
 
   const fetchSuggestions = useCallback(
@@ -74,10 +70,8 @@ export default function Search() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {/* Search Header */}
       <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto p-6 space-y-4">
-          {/* Search Bar */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-4 flex items-center text-gray-400 dark:text-gray-500">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,8 +87,6 @@ export default function Search() {
               placeholder="Discover amazing products..."
               className="w-full pl-12 pr-6 py-4 rounded-2xl border-0 ring-2 ring-gray-200 dark:ring-gray-700 focus:ring-3 focus:ring-orange-500 bg-transparent text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-200"
             />
-
-            {/* Suggestions Dropdown */}
             {suggestions.length > 0 && (
               <div className="absolute z-30 mt-2 w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
                 {suggestions.map((product) => (
@@ -118,7 +110,6 @@ export default function Search() {
             )}
           </div>
 
-          {/* Controls */}
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-2">
               <select
@@ -132,7 +123,6 @@ export default function Search() {
                 <option value="oldest">Oldest First</option>
               </select>
             </div>
-
             <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
               <button
                 onClick={() => setCardType('grid')}
@@ -155,7 +145,6 @@ export default function Search() {
         </div>
       </div>
 
-      {/* Product Grid */}
       <div className="flex-1 overflow-y-auto scrollbar-custom px-6 py-8">
         {loading ? (
           <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -179,11 +168,9 @@ export default function Search() {
         ) : (
           <div className={`max-w-7xl mx-auto ${cardType === 'grid' ? 'grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}`}>
             {products.map(product => (
-              cardType === 'grid' ? (
-                <GridCard key={product.id} product={product} />
-              ) : (
-                <ListCard key={product.id} product={product} />
-              )
+              cardType === 'grid'
+                ? <GridCard key={product.id} product={product} />
+                : <ListCard key={product.id} product={product} />
             ))}
           </div>
         )}
@@ -193,7 +180,7 @@ export default function Search() {
 }
 
 const GridCard = ({ product }) => (
-  <div 
+  <div
     className="group bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
     onClick={() => window.location = `/products/${product.id}`}
   >

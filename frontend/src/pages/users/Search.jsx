@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
@@ -15,23 +15,38 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const abortControllerRef = useRef(null);
+
+  const sortMapping = {
+    newest: { sortBy: 'createdAt', order: 'DESC' },
+    oldest: { sortBy: 'createdAt', order: 'ASC' },
+    'price-desc': { sortBy: 'price', order: 'DESC' },
+    'price-asc': { sortBy: 'price', order: 'ASC' },
+  };
 
   const fetchProducts = useCallback(
-    debounce(async (query, sort) => {
-      const abortController = new AbortController();
+    debounce(async (query, sortKey) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
       try {
         setLoading(true);
+        setError('');
+        const { sortBy, order } = sortMapping[sortKey] || sortMapping.newest;
+
         const params = {
           search: query,
-          sortBy: sort.includes('price') ? 'price' : 'createdAt',
-          order: sort.includes('asc') ? 'ASC' : 'DESC',
+          sortBy,
+          order,
         };
+
         const { data } = await axios.get(`${API}/products`, {
           params,
-          signal: abortController.signal,
+          signal: abortControllerRef.current.signal,
         });
         setProducts(data);
-        setError('');
       } catch (err) {
         if (!axios.isCancel(err)) {
           setError('Failed to fetch products');
@@ -39,16 +54,20 @@ export default function Search() {
       } finally {
         setLoading(false);
       }
-      return () => abortController.abort();
     }, 300),
     []
   );
 
-  const fuse = new Fuse([], {
-    keys: ['name', 'description'],
-    threshold: 0.3,
-    includeScore: true,
-  });
+  // Fuse instance for client-side suggestions
+  const fuse = React.useMemo(
+    () =>
+      new Fuse([], {
+        keys: ['name', 'description'],
+        threshold: 0.3,
+        includeScore: true,
+      }),
+    []
+  );
 
   const fetchSuggestions = useCallback(
     debounce(async (query) => {
@@ -56,12 +75,13 @@ export default function Search() {
       try {
         const { data } = await axios.get(`${API}/products`, { params: { limit: 50 } });
         fuse.setCollection(data);
-        setSuggestions(fuse.search(query).slice(0, 5).map(r => r.item));
+        const results = fuse.search(query).slice(0, 5).map((r) => r.item);
+        setSuggestions(results);
       } catch {
         setSuggestions([]);
       }
     }, 200),
-    []
+    [fuse]
   );
 
   useEffect(() => {
@@ -95,11 +115,7 @@ export default function Search() {
                     onClick={() => navigate(`/products/${product.id}`)}
                     className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                   >
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-10 h-10 rounded-lg object-cover mr-4"
-                    />
+                    <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-lg object-cover mr-4" />
                     <div>
                       <div className="text-gray-800 dark:text-gray-200 font-medium">{product.name}</div>
                       <div className="text-sm text-orange-500">ETB {product.price}</div>
@@ -127,6 +143,7 @@ export default function Search() {
               <button
                 onClick={() => setCardType('grid')}
                 className={`p-2 rounded-xl ${cardType === 'grid' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}
+                aria-label="Grid view"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -135,6 +152,7 @@ export default function Search() {
               <button
                 onClick={() => setCardType('list')}
                 className={`p-2 rounded-xl ${cardType === 'list' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}
+                aria-label="List view"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -158,19 +176,49 @@ export default function Search() {
           </div>
         ) : error ? (
           <div className="max-w-7xl mx-auto text-center py-12">
-            <div className="inline-flex items-center px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              {error}
-            </div>
+            <p className="text-red-500">{error}</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="max-w-7xl mx-auto text-center py-12 text-gray-500 dark:text-gray-400">
+            No products found.
+          </div>
+        ) : cardType === 'grid' ? (
+          <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => navigate(`/products/${product.id}`)}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
+              >
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="aspect-square w-full object-cover rounded-xl mb-4"
+                />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
+                <p className="text-orange-500 font-semibold">ETB {product.price}</p>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className={`max-w-7xl mx-auto ${cardType === 'grid' ? 'grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}`}>
-            {products.map(product => (
-              cardType === 'grid'
-                ? <GridCard key={product.id} product={product} />
-                : <ListCard key={product.id} product={product} />
+          <div className="max-w-7xl mx-auto space-y-4">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => navigate(`/products/${product.id}`)}
+                className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
+              >
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="w-20 h-20 object-cover rounded-xl"
+                />
+                <div className="flex flex-col">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
+                  <p className="text-orange-500 font-semibold">ETB {product.price}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{product.description}</p>
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -178,83 +226,3 @@ export default function Search() {
     </div>
   );
 }
-
-const GridCard = ({ product }) => (
-  <div
-    className="group bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
-    onClick={() => window.location = `/products/${product.id}`}
-  >
-    <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 mb-4">
-      <img
-        src={product.imageUrl}
-        alt={product.name}
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
-      {product.lastPrice && (
-        <div className="absolute top-2 right-2 bg-orange-500 text-white px-3 py-1 rounded-full text-sm">
-          -{Math.round(100 - (product.price / product.lastPrice * 100))}%
-        </div>
-      )}
-    </div>
-    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1 line-clamp-1">
-      {product.name}
-    </h3>
-    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-      {product.description}
-    </p>
-    <div className="flex justify-between items-center">
-      <div className="flex items-center gap-2">
-        <span className="text-xl font-bold text-orange-500">ETB {product.price}</span>
-        {product.lastPrice && (
-          <span className="text-sm line-through text-gray-400">ETB {product.lastPrice}</span>
-        )}
-      </div>
-      <div className="flex gap-2">
-        <button className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-        </button>
-        <button className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-const ListCard = ({ product }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer">
-    <div className="flex gap-4">
-      <div className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      <div className="flex-grow">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">{product.name}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{product.description}</p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-orange-500">ETB {product.price}</span>
-            {product.lastPrice && (
-              <span className="text-sm line-through text-gray-400">ETB {product.lastPrice}</span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors">
-              Add to Cart
-            </button>
-            <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors">
-              Details
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);

@@ -11,12 +11,8 @@ export default function Card() {
 
   useEffect(() => {
     axios.get(`${API}/products`)
-      .then(res => {
-        setProducts(res.data);
-      })
-      .catch(err => {
-        console.error("Error fetching products:", err);
-      });
+      .then((res) => setProducts(res.data))
+      .catch((err) => console.error("Error fetching products:", err));
   }, []);
 
   const handleDetails = (id) => {
@@ -29,37 +25,34 @@ export default function Card() {
   };
 
   return (
-    <div className="flex flex-wrap gap-5 justify-center">
+    <div className="flex flex-wrap gap-6 justify-center p-4">
       {products.map((product) => (
         <div
           key={product.id}
           onClick={() => handleDetails(product.id)}
-          className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden 
-                     hover:shadow-xl cursor-pointer transition duration-300"
+          className="bg-white dark:bg-slate-800 rounded-2xl shadow-md hover:shadow-xl cursor-pointer transition-all"
           style={{ width: "100%", maxWidth: "320px" }}
         >
           <img
-            src={product.imageUrl || '/assets/default-image.png'}
+            src={product.imageUrl || "/assets/default-image.png"}
             alt={product.name}
-            className="h-64 w-full object-cover"
+            className="w-full h-64 object-cover rounded-t-2xl"
           />
 
-          <div className="p-4 flex flex-col gap-2">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+          <div className="p-4 space-y-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
               {product.name}
             </h2>
 
             {product.lastPrice ? (
-              <div className="flex flex-col">
-                <span className="text-gray-500 line-through text-sm">
-                  {product.lastPrice} ETB
-                </span>
-                <span className="text-orange-500 text-lg font-bold">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="line-through">{product.lastPrice} ETB</span>
+                <span className="ml-2 text-orange-500 font-bold text-base">
                   {product.price} ETB
                 </span>
               </div>
             ) : (
-              <p className="text-orange-500 text-lg font-bold">
+              <p className="text-orange-500 font-bold text-base">
                 {product.price} ETB
               </p>
             )}
@@ -69,21 +62,20 @@ export default function Card() {
               4.5 (20 buyers)
             </div>
 
-            <button
-              onClick={(e) => handleAddToCart(e, product)}
-              className="mt-3 px-4 py-2 bg-orange-500 text-white rounded-lg 
-                         hover:bg-orange-600 transition text-sm font-medium"
-            >
-              Add to Cart
-            </button>
-
-            <button
-              onClick={() => handleDetails(product.id)}
-              className="mt-3 px-4 py-2 text-orange-500 rounded-lg border-gray-500 
-                         transition text-sm font-medium"
-            >
-              View details
-            </button>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={(e) => handleAddToCart(e, product)}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 px-4 rounded-lg"
+              >
+                Add to Cart
+              </button>
+              <button
+                onClick={() => handleDetails(product.id)}
+                className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 text-sm py-2 px-4 rounded-lg"
+              >
+                Details
+              </button>
+            </div>
           </div>
         </div>
       ))}

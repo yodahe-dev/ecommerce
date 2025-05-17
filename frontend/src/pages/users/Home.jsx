@@ -1,7 +1,6 @@
 import React from "react";
 import Hero from "../../components/Hero";
 import Card from "../../components/Card";
-import CategorySection from "../../components/CategorySection";
 import "../../home.css";
 
 export default function Home() {

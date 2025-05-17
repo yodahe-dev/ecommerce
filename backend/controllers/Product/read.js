@@ -1,9 +1,45 @@
 const { Product, User, Role } = require('../../models');
+const { Op, fn, col, where: whereFn } = require('sequelize');
+
+const formatProduct = (product) => ({
+  id: product.id,
+  name: product.name,
+  description: product.description,
+  price: product.price,
+  lastPrice: product.lastPrice,
+  imageUrl: product.imageUrl,
+  createdAt: product.createdAt,
+  updatedAt: product.updatedAt,
+  seller: {
+    username: product.user?.username,
+    email: product.user?.email,
+  },
+});
 
 module.exports = {
+  // GET /products?search=term&sortBy=createdAt&order=DESC
   getAll: async (req, res) => {
     try {
-      const products = await Product.findAll({
+      const { search = '', sortBy = 'createdAt', order = 'DESC', limit, offset } = req.query;
+
+      // If search term exists, search in name OR description (case insensitive)
+      const where =
+        search.trim() !== ''
+          ? {
+              [Op.or]: [
+                whereFn(fn('LOWER', col('Product.name')), {
+                  [Op.like]: `%${search.toLowerCase()}%`,
+                }),
+                whereFn(fn('LOWER', col('Product.description')), {
+                  [Op.like]: `%${search.toLowerCase()}%`,
+                }),
+              ],
+            }
+          : {};
+
+      // Optionally add limit and offset for pagination
+      const queryOptions = {
+        where,
         include: [
           {
             model: User,
@@ -11,16 +47,22 @@ module.exports = {
             attributes: ['username', 'email'],
           },
         ],
-        order: [['createdAt', 'DESC']],
-      });
+        order: [[sortBy, order.toUpperCase()]],
+      };
 
-      res.json(products);
+      if (limit) queryOptions.limit = parseInt(limit);
+      if (offset) queryOptions.offset = parseInt(offset);
+
+      const products = await Product.findAll(queryOptions);
+
+      res.json(products.map(formatProduct));
     } catch (err) {
-      console.error('Error getting products:', err);
-      res.status(500).json({ message: 'Failed to get products' });
+      console.error('Error fetching products:', err);
+      res.status(500).json({ message: 'Something went wrong while fetching products' });
     }
   },
 
+  // GET /products/seller/:sellerId
   getBySeller: async (req, res) => {
     const { sellerId } = req.params;
 
@@ -34,7 +76,7 @@ module.exports = {
         return res.status(404).json({ message: 'Seller not found' });
       }
 
-      if (user.role.name !== 'seller') {
+      if (user.role?.name !== 'seller') {
         return res.status(403).json({ message: 'User is not a seller' });
       }
 
@@ -51,11 +93,11 @@ module.exports = {
           role: user.role.name,
         },
         totalProducts: products.length,
-        products,
+        products: products.map(formatProduct),
       });
     } catch (err) {
-      console.error('Error getting seller profile:', err);
-      res.status(500).json({ message: 'Failed to get seller profile' });
+      console.error('Error fetching seller data:', err);
+      res.status(500).json({ message: 'Failed to fetch seller data' });
     }
   },
 };

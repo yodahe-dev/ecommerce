@@ -1,14 +1,15 @@
 const { Product, User, Role } = require('../../models');
 const { Op, fn, col, where: whereFn } = require('sequelize');
 
+// Format product for response
 const formatProduct = (product) => ({
   id: product.id,
   name: product.name,
   description: product.description,
   price: product.price,
   lastPrice: product.lastPrice,
-  imageUrl: product.imageUrl,
-  createdAt: product.createdAt, // 'YYYY-MM-DD HH:mm:ss' string
+  imageUrl: product.mainImage, // ✅ fixed line
+  createdAt: product.createdAt,
   updatedAt: product.updatedAt,
   seller: {
     username: product.user?.username,

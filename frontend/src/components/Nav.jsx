@@ -65,14 +65,14 @@ export default function Nav({
             <NavLink to="/about" label="About" />
 
             {/* Cart */}
-            <Link to="/cart" className="relative group">
+            {/* <Link to="/cart" className="relative group">
               <FaShoppingCart className="text-lg text-gray-700 dark:text-white group-hover:text-orange-500 transition" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-1.5 rounded-full font-bold">
                   {cartCount}
                 </span>
               )}
-            </Link>
+            </Link> */}
 
             {/* Theme Toggle */}
             <button
@@ -95,14 +95,14 @@ export default function Nav({
             </button>
 
             {/* Cart */}
-            <Link to="/cart" className="relative">
+            {/* <Link to="/cart" className="relative">
               <FaShoppingCart className="text-lg text-gray-700 dark:text-white" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-1.5 rounded-full font-bold">
                   {cartCount}
                 </span>
               )}
-            </Link>
+            </Link> */}
 
             {/* Mobile Menu Toggle */}
             <button

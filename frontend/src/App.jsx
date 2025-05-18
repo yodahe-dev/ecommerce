@@ -14,7 +14,7 @@ import Home from "./pages/users/Home";
 import Catagory from "./pages/users/Catagory";
 import About from "./pages/users/About";
 import Search from "./pages/users/Search";
-import Cart from "./pages/users/myCart";
+// import Cart from "./pages/users/myCart";
 
 function App() {
   const [token, setToken] = useState("");
@@ -170,7 +170,7 @@ function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/category" element={<Catagory />} />
           <Route path="/about" element={<About />} />                    
-          <Route path="/cart" element={<Cart />} />
+          {/* <Route path="/cart" element={<Cart />} /> */}
 
             {/* users for those auth users */}
           <Route path="/account" element={

@@ -4,9 +4,26 @@ import axios from 'axios';
 import debounce from 'lodash.debounce';
 import Fuse from 'fuse.js';
 import { FiGrid, FiList, FiShoppingCart } from 'react-icons/fi';
+import { FaStar } from 'react-icons/fa';
 import '../../home.css';
 
 const API = 'http://localhost:5000/api';
+
+function formatPrice(price) {
+  return price?.toLocaleString();
+}
+
+function getDiscountPercent(oldPrice, newPrice) {
+  if (!oldPrice || oldPrice <= newPrice) return null;
+  const percent = ((oldPrice - newPrice) / oldPrice) * 100;
+  return `-${Math.round(percent)}%`;
+}
+
+function getConditionLabel(condition) {
+  if (condition === 'new') return 'New';
+  if (condition === 'used') return 'Used';
+  return 'Unknown';
+}
 
 export default function Search() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,18 +48,17 @@ export default function Search() {
     'price-asc': { sortBy: 'price', order: 'ASC' },
   };
 
-  const addToCart = (product) => {
+  const buyNow = (product) => {
     const exists = cart.find((item) => item.id === product.id);
-    let newCart;
-    if (exists) {
-      newCart = cart.map((item) =>
-        item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-      );
-    } else {
-      newCart = [...cart, { ...product, qty: 1 }];
-    }
+    const newCart = exists
+      ? cart.map((item) =>
+          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+        )
+      : [...cart, { ...product, qty: 1 }];
+
     setCart(newCart);
     localStorage.setItem('cart', JSON.stringify(newCart));
+    navigate(`/checkout/${product.id}`);
   };
 
   const fetchProducts = useCallback(
@@ -101,14 +117,9 @@ export default function Search() {
 
   return (
     <div className="overflow-y-auto flex flex-col bg-gray-50 dark:bg-gray-900 h-screen">
-      <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 shadow-sm">
+      <div className="sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto p-6 space-y-4">
           <div className="relative group">
-            <div className="absolute inset-y-0 left-4 flex items-center text-gray-400 dark:text-gray-500">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
             <input
               value={searchQuery}
               onChange={(e) => {
@@ -129,7 +140,7 @@ export default function Search() {
                     <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-lg object-cover mr-4" />
                     <div>
                       <div className="text-gray-800 dark:text-gray-200 font-medium">{product.name}</div>
-                      <div className="text-sm text-orange-500">ETB {product.price}</div>
+                      <div className="text-sm text-orange-500">ETB {formatPrice(product.price)}</div>
                     </div>
                   </div>
                 ))}
@@ -149,16 +160,10 @@ export default function Search() {
               <option value="oldest">Oldest</option>
             </select>
             <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
-              <button
-                onClick={() => setCardType('grid')}
-                className={`p-2 rounded-xl ${cardType === 'grid' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}
-              >
+              <button onClick={() => setCardType('grid')} className={`p-2 rounded-xl ${cardType === 'grid' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}>
                 <FiGrid className="w-6 h-6" />
               </button>
-              <button
-                onClick={() => setCardType('list')}
-                className={`p-2 rounded-xl ${cardType === 'list' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}
-              >
+              <button onClick={() => setCardType('list')} className={`p-2 rounded-xl ${cardType === 'list' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}>
                 <FiList className="w-6 h-6" />
               </button>
             </div>
@@ -183,42 +188,102 @@ export default function Search() {
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">No products found.</div>
         ) : cardType === 'grid' ? (
           <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <div key={product.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4">
-                <img src={product.imageUrl} alt={product.name} className="aspect-square w-full object-cover rounded-xl mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
-                <p className="text-orange-500 font-semibold">ETB {product.price}</p>
-                <button
-                  onClick={() => addToCart(product)}
-                  className="mt-2 px-4 py-2 flex items-center gap-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600"
+            {products.map((product) => {
+              const discount = getDiscountPercent(product.lastPrice, product.price);
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => navigate(`/products/${product.id}`)}
+                  className="relative bg-white dark:bg-slate-800 rounded-2xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden"
                 >
-                  <FiShoppingCart /> Add to Cart
-                </button>
-              </div>
-            ))}
+                  {discount && (
+                    <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded shadow z-10">
+                      {discount}
+                    </div>
+                  )}
+                  <img
+                    src={product.imageUrl || "/assets/default-image.png"}
+                    alt={product.name}
+                    onError={(e) => (e.target.src = "/assets/default-image.png")}
+                    className="w-full h-64 object-cover rounded-t-2xl"
+                  />
+                  <div className="p-4 space-y-2">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{product.name}</h2>
+                    {product.lastPrice ? (
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="line-through">{formatPrice(product.lastPrice)} ETB</span>
+                        <span className="ml-2 text-orange-500 font-bold text-base">{formatPrice(product.price)} ETB</span>
+                      </div>
+                    ) : (
+                      <div className="text-orange-500 font-bold text-base">{formatPrice(product.price)} ETB</div>
+                    )}
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                      <FaStar className="text-yellow-400 mr-1" />
+                      4.5 (20 sold)
+                    </div>
+                    <div>{getConditionLabel(product.condition)}</div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          buyNow(product);
+                        }}
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 px-4 rounded-lg"
+                      >
+                        Buy Now
+                      </button>
+                      <button
+                        onClick={() => navigate(`/products/${product.id}`)}
+                        className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 text-sm py-2 px-4 rounded-lg"
+                      >
+                        Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="max-w-7xl mx-auto space-y-4">
-            {products.map((product) => (
-              <div key={product.id} className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4">
-                <img src={product.imageUrl} alt={product.name} className="w-20 h-20 object-cover rounded-xl" />
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
-                  <p className="text-orange-500 font-semibold">ETB {product.price}</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{product.description}</p>
-                </div>
-                <button
-                  onClick={() => addToCart(product)}
-                  className="px-3 py-2 flex items-center gap-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600"
+            {products.map((product) => {
+              const discount = getDiscountPercent(product.lastPrice, product.price);
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => navigate(`/products/${product.id}`)}
+                  className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer"
                 >
-                  <FiShoppingCart /> Add
-                </button>
-              </div>
-            ))}
+                  <img src={product.imageUrl} alt={product.name} className="w-20 h-20 object-cover rounded-xl" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
+                    {product.lastPrice ? (
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="line-through">{formatPrice(product.lastPrice)} ETB</span>
+                        <span className="ml-2 text-orange-500 font-bold text-base">{formatPrice(product.price)} ETB</span>
+                        <span className="ml-2 text-green-600">{discount}</span>
+                      </div>
+                    ) : (
+                      <p className="text-orange-500 font-semibold">ETB {formatPrice(product.price)}</p>
+                    )}
+                    <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{product.description}</p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      buyNow(product);
+                    }}
+                    className="px-3 py-2 flex items-center gap-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600"
+                  >
+                    <FiShoppingCart /> Buy Now
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        )}<div className='min-h-52'/>
+        )}
+        <div className="min-h-52" />
       </div>
-      
     </div>
   );
 }

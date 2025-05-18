@@ -1,92 +1,151 @@
-import React from 'react'
+import { useEffect } from 'react';
 
 export default function About() {
+  // Optional: Smooth scroll on mount (good UX)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Hero Section */}
-        <div className="text-center mb-20 space-y-6 animate-fade-in">
-          <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-            Pickup Marketplace
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 font-medium">
-            Ethiopia's Trusted E-Commerce Ecosystem
+    <>
+      <style>{`
+        /* Custom scrollbar for this page */
+        ::-webkit-scrollbar {
+          width: 12px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #f0f0f0;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #f97316; /* orange */
+          border-radius: 10px;
+          border: 3px solid #f0f0f0;
+          transition: background-color 0.3s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #ea580c;
+        }
+
+        /* For Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: #f97316 #f0f0f0;
+      `}</style>
+
+      <div className="max-w-full mx-auto p-8 bg-white dark:bg-gray-900 rounded-lg shadow-2xl my-12 overflow-y-auto max-h-[80vh] scroll-smooth">
+        <h1 className="text-5xl font-extrabold mb-10 text-center bg-gradient-to-r from-orange-500 to-orange-700 bg-clip-text text-transparent">
+          Ethiopia's Trusted E-Commerce
+        </h1>
+
+        <section className="mb-12 opacity-0 animate-fadeIn delay-100">
+          <p className="text-xl text-gray-900 dark:text-gray-100 leading-relaxed tracking-wide">
+            Welcome to your reliable online marketplace. We connect buyers and sellers across Ethiopia with a focus on <span className="font-semibold text-orange-600">trust</span>, <span className="font-semibold text-orange-600">quality</span>, and <span className="font-semibold text-orange-600">service</span>.
           </p>
-        </div>
+        </section>
 
-        {/* Trust Badges */}
-        <div className="grid md:grid-cols-3 gap-8 mb-20">
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-shadow">
-            <div className="text-orange-600 dark:text-orange-400 text-4xl mb-4">🛡️</div>
-            <h3 className="text-2xl font-bold mb-4">100% Money Back Guarantee</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Full refund protection if items don't arrive. Your satisfaction is our priority.
-            </p>
-          </div>
+        <section className="mb-12 p-8 rounded-xl border-4 border-orange-400 dark:border-orange-600 bg-orange-50 dark:bg-orange-900 shadow-lg opacity-0 animate-fadeIn delay-200">
+          <h2 className="text-3xl font-bold mb-6 text-orange-700 dark:text-orange-300 tracking-wide">
+            Our Guarantee
+          </h2>
+          <p className="text-gray-800 dark:text-orange-200 leading-relaxed text-lg">
+            We stand behind every purchase you make. If your product does not arrive within a few weeks, you will get <span className="font-bold underline decoration-orange-600">100% of your money back</span> — no questions asked. Our commitment is to your satisfaction and peace of mind.
+          </p>
+        </section>
 
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-shadow">
-            <div className="text-orange-600 dark:text-orange-400 text-4xl mb-4">🤝</div>
-            <h3 className="text-2xl font-bold mb-4">Verified Sellers</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              All sellers undergo strict verification for your peace of mind.
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-shadow">
-            <div className="text-orange-600 dark:text-orange-400 text-4xl mb-4">🚚</div>
-            <h3 className="text-2xl font-bold mb-4">Nationwide Delivery</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Reliable logistics network covering every corner of Ethiopia
-            </p>
-          </div>
-        </div>
-
-        {/* Seller CTA */}
-        <div className="bg-orange-600 dark:bg-orange-700 rounded-3xl p-12 text-center mb-20 transform hover:scale-[1.01] transition-transform">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+        <section className="mb-12 opacity-0 animate-fadeIn delay-300">
+          <h2 className="text-3xl font-bold mb-6 text-orange-600 dark:text-orange-400 tracking-wide">
             Become a Verified Seller
           </h2>
-          <p className="text-orange-100 mb-8 text-lg">
-            Join Ethiopia's fastest growing marketplace
+          <p className="text-gray-900 dark:text-gray-100 text-lg mb-4 leading-relaxed">
+            Interested in selling your products on our platform? To become a verified seller, please contact our team. Verification helps ensure the quality and authenticity of sellers, benefiting all users.
           </p>
-          <div className="space-y-4 text-orange-50">
-            <a href="tel:0905582005" className="block text-xl hover:text-white transition-colors">
-              ☎️ 0905 582 005
-            </a>
-            <a href="tel:0985543325" className="block text-xl hover:text-white transition-colors">
-              📱 0985 543 325
-            </a>
-            <a href="mailto:yodahejob@gmail.com" className="block text-xl hover:text-white transition-colors">
-              ✉️ yodahejob@gmail.com
-            </a>
-          </div>
-        </div>
+          <p className="text-gray-900 dark:text-gray-100 text-lg leading-relaxed">
+            Verified sellers get priority listing, seller support, and access to exclusive tools to grow their business.
+          </p>
+        </section>
 
-        {/* Social Proof */}
-        <div className="text-center space-y-8">
-          <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-            Join Our Community
-          </h3>
-          <div className="flex justify-center space-x-6">
-            <a href="#" className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <span className="text-gray-700 dark:text-gray-300 hover:text-orange-600">📘 yodahe.dev</span>
-            </a>
-            <a href="#" className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <span className="text-gray-700 dark:text-gray-300 hover:text-orange-600">📸 yodahe.dev</span>
-            </a>
-            <a href="#" className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <span className="text-gray-700 dark:text-gray-300 hover:text-orange-600">🐦 yodahe.dev</span>
-            </a>
-          </div>
-        </div>
+        <section className="mb-12 opacity-0 animate-fadeIn delay-400">
+          <h2 className="text-3xl font-bold mb-6 text-orange-600 dark:text-orange-400 tracking-wide">
+            Contact Us
+          </h2>
+          <p className="text-gray-900 dark:text-gray-100 text-lg mb-4 leading-relaxed">
+            For seller verification, questions, or any other information, feel free to reach out to us:
+          </p>
+          <ul className="list-disc list-inside text-gray-900 dark:text-gray-100 text-lg space-y-2">
+            <li>
+              Email:{' '}
+              <a
+                href="mailto:support@ethiotrust.com"
+                className="text-orange-600 dark:text-orange-400 hover:underline transition-colors"
+              >
+                support@ethiotrust.com
+              </a>
+            </li>
+            <li>
+              Phone:{' '}
+              <a
+                href="tel:+251985543325"
+                className="text-orange-600 dark:text-orange-400 hover:underline transition-colors font-semibold"
+              >
+                +251 98 554 3325
+              </a>
+            </li>
+            <li>Address: 123 Addis Ababa St, Addis Ababa, Ethiopia</li>
+          </ul>
+        </section>
 
-        {/* Micro-interaction Watermark */}
-        <div className="mt-20 text-center opacity-50 hover:opacity-100 transition-opacity">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            🔒 Trusted by 1M+ Ethiopians
-          </span>
-        </div>
+        <section className="opacity-0 animate-fadeIn delay-500">
+          <h2 className="text-3xl font-bold mb-6 text-orange-600 dark:text-orange-400 tracking-wide">
+            Why Shop With Us?
+          </h2>
+          <ul className="list-disc list-inside text-gray-900 dark:text-gray-100 text-lg space-y-3">
+            <li>
+              <strong>Wide Selection:</strong> Find products from trusted local sellers across Ethiopia.
+            </li>
+            <li>
+              <strong>Secure Payments:</strong> Our platform ensures safe and reliable transactions.
+            </li>
+            <li>
+              <strong>Fast Delivery:</strong> We work with trusted couriers to deliver your order quickly.
+            </li>
+            <li>
+              <strong>Customer Support:</strong> Dedicated support ready to help you with any issue.
+            </li>
+            <li>
+              <strong>Verified Sellers:</strong> Only quality-checked sellers join our marketplace.
+            </li>
+          </ul>
+        </section>
+
       </div>
-    </div>
-  )
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.8s ease forwards;
+          transform: translateY(20px);
+        }
+        .delay-100 {
+          animation-delay: 0.1s;
+        }
+        .delay-200 {
+          animation-delay: 0.2s;
+        }
+        .delay-300 {
+          animation-delay: 0.3s;
+        }
+        .delay-400 {
+          animation-delay: 0.4s;
+        }
+        .delay-500 {
+          animation-delay: 0.5s;
+        }
+      `}</style>
+    </>
+  );
 }

@@ -20,87 +20,111 @@ export default function Card() {
     navigate(`/product/${id}`);
   };
 
-  const handleAddToCart = async (e, product) => {
+  const handleBuyNow = (e, product) => {
     e.stopPropagation();
+    navigate(`/checkout/${product.id}`);
+  };
 
-    const userId = localStorage.getItem("user_id");
-    if (!userId) {
-      alert("Please log in to add items to your cart.");
-      return navigate("/login");
-    }
+  const getDiscountPercentage = (oldPrice, newPrice) => {
+    if (!oldPrice || oldPrice <= newPrice) return null;
+    const percent = Math.round(((oldPrice - newPrice) / oldPrice) * 100);
+    return `-${percent}%`;
+  };
 
-    try {
-      const res = await axios.post(`${API}/cart`, {
-        userId,
-        productId: product.id,
-        quantity: 1,
-      });
-
-      console.log("Cart response:", res.data);
-      alert(`Added "${product.name}" to cart.`);
-    } catch (err) {
-      console.error("Add to cart failed:", err);
-      alert("Could not add to cart. Try again.");
+  const getConditionLabel = (condition) => {
+    switch (condition?.toLowerCase()) {
+      case "new":
+        return (
+          <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
+            New
+          </span>
+        );
+      case "old":
+        return (
+          <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded">
+            Old
+          </span>
+        );
+      default:
+        return null;
     }
   };
 
   return (
     <div className="flex flex-wrap gap-6 justify-center p-4">
-      {products.map(product => (
-        <div
-          key={product.id}
-          onClick={() => handleDetails(product.id)}
-          className="bg-white dark:bg-slate-800 rounded-2xl shadow-md hover:shadow-xl cursor-pointer transition-all"
-          style={{ width: "100%", maxWidth: "320px" }}
-        >
-          <img
-            src={product.imageUrl || "/assets/default-image.png"}
-            alt={product.name}
-            className="w-full h-64 object-cover rounded-t-2xl"
-          />
+      {products.map(product => {
+        const discount = getDiscountPercentage(product.lastPrice, product.price);
 
-          <div className="p-4 space-y-2">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-              {product.name}
-            </h2>
-
-            {product.lastPrice ? (
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                <span className="line-through">
-                  {product.lastPrice} ETB
-                </span>
-                <span className="ml-2 text-orange-500 font-bold text-base">
-                  {product.price} ETB
-                </span>
+        return (
+          <div
+            key={product.id}
+            onClick={() => handleDetails(product.id)}
+            className="relative bg-white dark:bg-slate-800 rounded-2xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden"
+            style={{ width: "100%", maxWidth: "320px" }}
+          >
+            {/* Discount badge */}
+            {discount && (
+              <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded shadow z-10">
+                {discount}
               </div>
-            ) : (
-              <p className="text-orange-500 font-bold text-base">
-                {product.price} ETB
-              </p>
             )}
 
-            <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-              <FaStar className="text-yellow-400 mr-1" />
-              4.5 (20 buyers)
-            </div>
+            {/* Product image */}
+            <img
+              src={product.imageUrl || "/assets/default-image.png"}
+              alt={product.name}
+              onError={(e) => (e.target.src = "/assets/default-image.png")}
+              className="w-full h-64 object-cover rounded-t-2xl"
+            />
 
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={e => handleAddToCart(e, product)}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 px-4 rounded-lg"
-              >
-                Add to Cart
-              </button>
-              <button
-                onClick={() => handleDetails(product.id)}
-                className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 text-sm py-2 px-4 rounded-lg"
-              >
-                Details
-              </button>
+            <div className="p-4 space-y-2">
+              {/* Name */}
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                {product.name}
+              </h2>
+
+              {/* Price */}
+              {product.lastPrice ? (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="line-through">{product.lastPrice} ETB</span>
+                  <span className="ml-2 text-orange-500 font-bold text-base">
+                    {product.price} ETB
+                  </span>
+                </div>
+              ) : (
+                <p className="text-orange-500 font-bold text-base">
+                  {product.price} ETB
+                </p>
+              )}
+
+              {/* Rating */}
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                <FaStar className="text-yellow-400 mr-1" />
+                4.5 (20 sold)
+              </div>
+
+              {/* Condition */}
+              <div>{getConditionLabel(product.condition)}</div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={e => handleBuyNow(e, product)}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 px-4 rounded-lg"
+                >
+                  Buy Now
+                </button>
+                <button
+                  onClick={() => handleDetails(product.id)}
+                  className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 text-sm py-2 px-4 rounded-lg"
+                >
+                  Details
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

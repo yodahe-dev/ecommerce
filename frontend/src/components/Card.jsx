@@ -10,23 +10,43 @@ export default function Card() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`${API}/products`)
-      .then((res) => setProducts(res.data))
-      .catch((err) => console.error("Error fetching products:", err));
+    axios
+      .get(`${API}/products`)
+      .then(res => setProducts(res.data))
+      .catch(err => console.error("Error fetching products:", err));
   }, []);
 
-  const handleDetails = (id) => {
+  const handleDetails = id => {
     navigate(`/product/${id}`);
   };
 
-  const handleAddToCart = (e, product) => {
+  const handleAddToCart = async (e, product) => {
     e.stopPropagation();
-    console.log("Added to cart:", product);
+
+    const userId = localStorage.getItem("user_id");
+    if (!userId) {
+      alert("Please log in to add items to your cart.");
+      return navigate("/login");
+    }
+
+    try {
+      const res = await axios.post(`${API}/cart`, {
+        userId,
+        productId: product.id,
+        quantity: 1,
+      });
+
+      console.log("Cart response:", res.data);
+      alert(`Added "${product.name}" to cart.`);
+    } catch (err) {
+      console.error("Add to cart failed:", err);
+      alert("Could not add to cart. Try again.");
+    }
   };
 
   return (
     <div className="flex flex-wrap gap-6 justify-center p-4">
-      {products.map((product) => (
+      {products.map(product => (
         <div
           key={product.id}
           onClick={() => handleDetails(product.id)}
@@ -46,7 +66,9 @@ export default function Card() {
 
             {product.lastPrice ? (
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                <span className="line-through">{product.lastPrice} ETB</span>
+                <span className="line-through">
+                  {product.lastPrice} ETB
+                </span>
                 <span className="ml-2 text-orange-500 font-bold text-base">
                   {product.price} ETB
                 </span>
@@ -64,7 +86,7 @@ export default function Card() {
 
             <div className="flex gap-2 mt-4">
               <button
-                onClick={(e) => handleAddToCart(e, product)}
+                onClick={e => handleAddToCart(e, product)}
                 className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm py-2 px-4 rounded-lg"
               >
                 Add to Cart

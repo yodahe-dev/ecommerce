@@ -78,7 +78,7 @@ export default function SellerProfile() {
   if (!seller) return <p>Loading...</p>;
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
+    <div className="max-w-3xl mx-auto p-4 min-h-screen">
       <h2 className="text-2xl font-bold mb-2">Seller Profile</h2>
       <p><strong>Username:</strong> {seller.username}</p>
       <p><strong>Email:</strong> {seller.email}</p>
@@ -90,7 +90,7 @@ export default function SellerProfile() {
       <h3 className="text-xl font-semibold mb-2">Your Products</h3>
       <ul className="space-y-2">
         {products.map((product) => (
-          <li key={product.id} className="border p-3 rounded bg-gray-50 dark:bg-gray-800">
+          <li key={product.id} className="border p-3 rounded bg-gray-50 dark:bg-gray-800 ">
             <p className="font-medium">{product.name}</p>
             <p className="text-sm text-gray-600">Price: ${product.price}</p>
             <p className="text-sm text-gray-600">Quantity: {product.quantity}</p>

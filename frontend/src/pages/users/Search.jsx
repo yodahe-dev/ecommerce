@@ -3,17 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 import Fuse from 'fuse.js';
+import { FiGrid, FiList, FiShoppingCart } from 'react-icons/fi';
+import '../../home.css';
 
 const API = 'http://localhost:5000/api';
 
 export default function Search() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-  const [cardType, setCardType] = useState('grid');
+  const [cardType, setCardType] = useState('list');
   const [suggestions, setSuggestions] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cart, setCart] = useState(() => {
+    const saved = localStorage.getItem('cart');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const navigate = useNavigate();
   const abortControllerRef = useRef(null);
 
@@ -22,6 +29,20 @@ export default function Search() {
     oldest: { sortBy: 'createdAt', order: 'ASC' },
     'price-desc': { sortBy: 'price', order: 'DESC' },
     'price-asc': { sortBy: 'price', order: 'ASC' },
+  };
+
+  const addToCart = (product) => {
+    const exists = cart.find((item) => item.id === product.id);
+    let newCart;
+    if (exists) {
+      newCart = cart.map((item) =>
+        item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+      );
+    } else {
+      newCart = [...cart, { ...product, qty: 1 }];
+    }
+    setCart(newCart);
+    localStorage.setItem('cart', JSON.stringify(newCart));
   };
 
   const fetchProducts = useCallback(
@@ -35,22 +56,13 @@ export default function Search() {
         setLoading(true);
         setError('');
         const { sortBy, order } = sortMapping[sortKey] || sortMapping.newest;
-
-        const params = {
-          search: query,
-          sortBy,
-          order,
-        };
-
         const { data } = await axios.get(`${API}/products`, {
-          params,
+          params: { search: query, sortBy, order },
           signal: abortControllerRef.current.signal,
         });
         setProducts(data);
       } catch (err) {
-        if (!axios.isCancel(err)) {
-          setError('Failed to fetch products');
-        }
+        if (!axios.isCancel(err)) setError('Failed to fetch products');
       } finally {
         setLoading(false);
       }
@@ -58,7 +70,6 @@ export default function Search() {
     []
   );
 
-  // Fuse instance for client-side suggestions
   const fuse = React.useMemo(
     () =>
       new Fuse([], {
@@ -89,7 +100,7 @@ export default function Search() {
   }, [searchQuery, sortBy, fetchProducts]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="overflow-y-auto flex flex-col bg-gray-50 dark:bg-gray-900 h-screen">
       <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto p-6 space-y-4">
           <div className="relative group">
@@ -104,16 +115,16 @@ export default function Search() {
                 setSearchQuery(e.target.value);
                 fetchSuggestions(e.target.value);
               }}
-              placeholder="Discover amazing products..."
-              className="w-full pl-12 pr-6 py-4 rounded-2xl border-0 ring-2 ring-gray-200 dark:ring-gray-700 focus:ring-3 focus:ring-orange-500 bg-transparent text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-200"
+              placeholder="Search products..."
+              className="w-full pl-12 pr-6 py-4 rounded-2xl border-0 ring-2 ring-gray-200 dark:ring-gray-700 focus:ring-3 focus:ring-orange-500 bg-transparent text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
             {suggestions.length > 0 && (
-              <div className="absolute z-30 mt-2 w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+              <div className="absolute z-30 mt-2 w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
                 {suggestions.map((product) => (
                   <div
                     key={product.id}
                     onClick={() => navigate(`/products/${product.id}`)}
-                    className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                    className="flex items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                   >
                     <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-lg object-cover mr-4" />
                     <div>
@@ -126,44 +137,36 @@ export default function Search() {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 appearance-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="newest">Newest First</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="oldest">Oldest First</option>
-              </select>
-            </div>
+          <div className="flex justify-between items-center">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+            >
+              <option value="newest">Newest</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="oldest">Oldest</option>
+            </select>
             <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
               <button
                 onClick={() => setCardType('grid')}
                 className={`p-2 rounded-xl ${cardType === 'grid' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}
-                aria-label="Grid view"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
+                <FiGrid className="w-6 h-6" />
               </button>
               <button
                 onClick={() => setCardType('list')}
                 className={`p-2 rounded-xl ${cardType === 'list' ? 'bg-white dark:bg-gray-800 shadow-sm' : ''}`}
-                aria-label="List view"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
+                <FiList className="w-6 h-6" />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-custom px-6 py-8">
+      <div className="flex-1 overflow-y-auto px-6 py-6">
         {loading ? (
           <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
@@ -175,54 +178,47 @@ export default function Search() {
             ))}
           </div>
         ) : error ? (
-          <div className="max-w-7xl mx-auto text-center py-12">
-            <p className="text-red-500">{error}</p>
-          </div>
+          <div className="text-center py-12 text-red-500">{error}</div>
         ) : products.length === 0 ? (
-          <div className="max-w-7xl mx-auto text-center py-12 text-gray-500 dark:text-gray-400">
-            No products found.
-          </div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">No products found.</div>
         ) : cardType === 'grid' ? (
           <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <div
-                key={product.id}
-                onClick={() => navigate(`/products/${product.id}`)}
-                className="bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
-              >
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="aspect-square w-full object-cover rounded-xl mb-4"
-                />
+              <div key={product.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4">
+                <img src={product.imageUrl} alt={product.name} className="aspect-square w-full object-cover rounded-xl mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
                 <p className="text-orange-500 font-semibold">ETB {product.price}</p>
+                <button
+                  onClick={() => addToCart(product)}
+                  className="mt-2 px-4 py-2 flex items-center gap-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600"
+                >
+                  <FiShoppingCart /> Add to Cart
+                </button>
               </div>
             ))}
           </div>
         ) : (
           <div className="max-w-7xl mx-auto space-y-4">
             {products.map((product) => (
-              <div
-                key={product.id}
-                onClick={() => navigate(`/products/${product.id}`)}
-                className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
-              >
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-20 h-20 object-cover rounded-xl"
-                />
-                <div className="flex flex-col">
+              <div key={product.id} className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4">
+                <img src={product.imageUrl} alt={product.name} className="w-20 h-20 object-cover rounded-xl" />
+                <div className="flex-1">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
                   <p className="text-orange-500 font-semibold">ETB {product.price}</p>
                   <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{product.description}</p>
                 </div>
+                <button
+                  onClick={() => addToCart(product)}
+                  className="px-3 py-2 flex items-center gap-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600"
+                >
+                  <FiShoppingCart /> Add
+                </button>
               </div>
             ))}
           </div>
-        )}
+        )}<div className='min-h-52'/>
       </div>
+      
     </div>
   );
 }

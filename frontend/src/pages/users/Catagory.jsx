@@ -1,9 +1,10 @@
-import React from 'react'
+import Card from "../../components/Card"
 
 export default function Catagory() {
   return (
     <div className='h-screen'>
-      Your, on catagory
+       
+      <Card/>
     </div>
   )
 }

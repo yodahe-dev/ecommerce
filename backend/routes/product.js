@@ -10,6 +10,7 @@ const upload = require('../middlewares/upload'); // already correct
 
 // Routes
 router.get('/products', readProduct.getAll);
+router.get('/products/:id', readProduct.getById);
 router.get('/products/seller/:sellerId', readProduct.getBySeller);
 
 // ✅ Fix: use .post with upload (already set up as .fields)

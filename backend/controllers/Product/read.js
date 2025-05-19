@@ -61,6 +61,46 @@ module.exports = {
     }
   },
 
+  getById: async (req, res) => {
+  const { id } = req.params;
+  try {
+    const product = await Product.findOne({
+      where: { id },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["username", "email"],
+        },
+      ],
+    });
+
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    res.json({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      lastPrice: product.lastPrice,
+      imageUrl: product.mainImage,
+      extraImages: product.extraImages,
+      sizes: product.sizes,
+      shippingPrice: product.shippingPrice,
+      condition: product.condition,
+      createdAt: product.createdAt,
+      seller: {
+        username: product.user?.username,
+        email: product.user?.email,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching product by ID:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+},
+
+
   // GET /products/seller/:sellerId
   getBySeller: async (req, res) => {
     const { sellerId } = req.params;

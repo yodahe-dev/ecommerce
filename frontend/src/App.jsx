@@ -14,12 +14,12 @@ import Home from "./pages/users/Home";
 import Catagory from "./pages/users/Catagory";
 import About from "./pages/users/About";
 import Search from "./pages/users/Search";
-// import Cart from "./pages/users/myCart";
+import ProductDetail from "./pages/users/details"; // ✅ NEW
 
 function App() {
   const [token, setToken] = useState("");
   const [email, setEmail] = useState("");
-  const [darkMode, setDarkMode] = useState(true); // default to dark
+  const [darkMode, setDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const navigate = useNavigate();
@@ -37,8 +37,6 @@ function App() {
         }
 
         if (storedEmail) setEmail(storedEmail);
-
-        // force dark if no theme in localStorage
         setDarkMode(theme ? theme === "dark" : true);
       } catch (err) {
         console.error("App init failed", err);
@@ -52,14 +50,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const themeClass = "dark";
     const root = document.documentElement;
-
     if (darkMode) {
-      root.classList.add(themeClass);
+      root.classList.add("dark");
       localStorage.setItem("theme", "dark");
     } else {
-      root.classList.remove(themeClass);
+      root.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
   }, [darkMode]);
@@ -130,61 +126,31 @@ function App() {
       <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
         <Routes>
 
-          {/* For Those Not Auth users */}
-          <Route
-            path="/signup"
-            element={
-              <PublicOnlyRoute isAuthenticated={!!token}>
-                <Signup />
-              </PublicOnlyRoute>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <PublicOnlyRoute isAuthenticated={!!token}>
-                <Login onLogin={handleLogin} />
-              </PublicOnlyRoute>
-            }
-          />
+          {/* Public routes */}
+          <Route path="/signup" element={<PublicOnlyRoute isAuthenticated={!!token}><Signup /></PublicOnlyRoute>} />
+          <Route path="/login" element={<PublicOnlyRoute isAuthenticated={!!token}><Login onLogin={handleLogin} /></PublicOnlyRoute>} />
 
-          {/* seller role only can accessece this */}
-          <Route
-            path="/upload"
-            element={
-              <ProtectedRoute isAuthenticated={!!token}>
-                <CreateProduct />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute isAuthenticated={!!token}>
-                <SellerProfile />
-              </ProtectedRoute>
-            }
-          />
-          
+          {/* Seller only routes */}
+          <Route path="/upload" element={<ProtectedRoute isAuthenticated={!!token}><CreateProduct /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute isAuthenticated={!!token}><SellerProfile /></ProtectedRoute>} />
+
+          {/* Public pages */}
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/category" element={<Catagory />} />
-          <Route path="/about" element={<About />} />                    
-          {/* <Route path="/cart" element={<Cart />} /> */}
+          <Route path="/about" element={<About />} />
+          <Route path="/product/:id" element={<ProductDetail />} /> {/* ✅ Product detail route */}
 
-            {/* users for those auth users */}
-          <Route path="/account" element={
-              <ProtectedRoute isAuthenticated={!!token}>
-                <Profile token={token} darkMode={darkMode} setDarkMode={setDarkMode} />
-              </ProtectedRoute>
-            } />
+          {/* Auth-only user profile */}
+          <Route path="/account" element={<ProtectedRoute isAuthenticated={!!token}><Profile token={token} darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
+
+          {/* Fallback 404 */}
           <Route path="*" element={
-             <div className="flex flex-col justify-center text-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-                <p className="text-3xl">404 - Page Not Found </p><br />
-                <p className="font-extrabold text-9xl"> 😒</p>
-              </div>
-            }
-          />
+            <div className="flex flex-col justify-center text-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
+              <p className="text-3xl">404 - Page Not Found</p>
+              <p className="font-extrabold text-9xl">😒</p>
+            </div>
+          } />
         </Routes>
       </main>
     </div>

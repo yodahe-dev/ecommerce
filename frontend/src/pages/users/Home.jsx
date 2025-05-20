@@ -1,12 +1,11 @@
 import React from "react";
 import Hero from "../../components/Hero";
 import Card from "../../components/Card";
-import "../../home.css";
 
 export default function Home() {
   return (
-    <div className="w-full h-screen flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto custom-scroll">
+
+      <div className="">
         {/* Hero */}
         <section>
           <Hero />
@@ -31,6 +30,5 @@ export default function Home() {
 
         </div>
       </div>
-    </div>
   );
 }

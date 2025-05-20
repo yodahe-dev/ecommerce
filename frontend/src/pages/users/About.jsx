@@ -1,38 +1,13 @@
 import { useEffect } from 'react';
 
 export default function About() {
-  // Optional: Smooth scroll on mount (good UX)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   return (
     <>
-      <style>{`
-        /* Custom scrollbar for this page */
-        ::-webkit-scrollbar {
-          width: 12px;
-        }
-        ::-webkit-scrollbar-track {
-          background: #f0f0f0;
-          border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: #f97316; /* orange */
-          border-radius: 10px;
-          border: 3px solid #f0f0f0;
-          transition: background-color 0.3s ease;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: #ea580c;
-        }
-
-        /* For Firefox */
-        scrollbar-width: thin;
-        scrollbar-color: #f97316 #f0f0f0;
-      `}</style>
-
-      <div className="max-w-full mx-auto p-8 bg-white dark:bg-gray-900 rounded-lg shadow-2xl my-12 overflow-y-auto max-h-[80vh] scroll-smooth">
+      <div className="max-w-full mx-auto p-8 bg-white dark:bg-gray-900 rounded-lg shadow-2xl my-12">
         <h1 className="text-5xl font-extrabold mb-10 text-center bg-gradient-to-r from-orange-500 to-orange-700 bg-clip-text text-transparent">
           Ethiopia's Trusted E-Commerce
         </h1>
@@ -116,7 +91,6 @@ export default function About() {
             </li>
           </ul>
         </section>
-
       </div>
 
       <style jsx>{`

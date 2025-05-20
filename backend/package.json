@@ -66,6 +66,7 @@
     "speakeasy": "^2.0.0",
     "trash": "^9.0.0",
     "uploadthing": "^7.7.2",
+    "validator": "^13.15.0",
     "xss": "^1.0.15",
     "zxcvbn": "^4.4.2"
   },

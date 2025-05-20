@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+// CreateProduct.jsx
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus } from 'lucide-react';
+import { FiX, FiPlus } from 'react-icons/fi';
 
 const API = 'http://localhost:5000/api';
 
@@ -15,14 +16,15 @@ export default function CreateProduct() {
   });
   const [sizes, setSizes] = useState([]);
   const [sizeInput, setSizeInput] = useState('');
-
   const [mainImage, setMainImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [extraImages, setExtraImages] = useState([]);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
 
   const navigate = useNavigate();
+  const sizeInputRef = useRef();
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -34,20 +36,34 @@ export default function CreateProduct() {
     return () => mq.removeEventListener('change', updateTheme);
   }, []);
 
+  const validate = () => {
+    const newErrors = {};
+    if (!form.name.trim()) newErrors.name = 'Product name is required';
+    else if (form.name.length > 100) newErrors.name = 'Max 100 characters';
+    if (form.description.length > 2000) newErrors.description = 'Max 2000 characters';
+    if (!form.price || !/^\d{1,9}$/.test(form.price) || Number(form.price) <= 0)
+      newErrors.price = 'Valid price is required';
+    if (form.lastPrice && (!/^\d{1,9}$/.test(form.lastPrice) || Number(form.lastPrice) < 0))
+      newErrors.lastPrice = 'Last price must be 1-9 digits';
+    if (!mainImage) newErrors.mainImage = 'Main image is required';
+    return newErrors;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: null }));
   };
 
   const handleMainImage = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
-      return setError('Main image must be an image under 5MB');
+      return setErrors((prev) => ({ ...prev, mainImage: 'Image must be under 5MB' }));
     }
     setMainImage(file);
     setPreview(URL.createObjectURL(file));
-    setError('');
+    setErrors((prev) => ({ ...prev, mainImage: null }));
   };
 
   const handleExtraImages = (e) => {
@@ -55,10 +71,10 @@ export default function CreateProduct() {
       (f) => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024
     );
     if (files.length + extraImages.length > 5) {
-      return setError('You can upload a maximum of 5 extra images');
+      return setErrors((prev) => ({ ...prev, extraImages: 'Max 5 extra images' }));
     }
     setExtraImages((prev) => [...prev, ...files]);
-    setError('');
+    setErrors((prev) => ({ ...prev, extraImages: null }));
   };
 
   const removeExtraImage = (index) => {
@@ -70,6 +86,7 @@ export default function CreateProduct() {
     if (trimmed && !sizes.includes(trimmed)) {
       setSizes((prev) => [...prev, trimmed]);
       setSizeInput('');
+      sizeInputRef.current?.focus();
     }
   };
 
@@ -79,9 +96,11 @@ export default function CreateProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return setError('Product name is required');
-    if (!form.price || Number(form.price) <= 0) return setError('Valid price is required');
-    if (!mainImage) return setError('Main image is required');
+    const validation = validate();
+    if (Object.keys(validation).length > 0) {
+      setErrors(validation);
+      return;
+    }
 
     const userId = localStorage.getItem('user_id');
     if (!userId) {
@@ -105,126 +124,154 @@ export default function CreateProduct() {
       await axios.post(`${API}/products`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      alert('Product created');
+      setSuccess('Product created.');
       setForm({ name: '', description: '', price: '', lastPrice: '', condition: '' });
       setSizes([]);
       setMainImage(null);
       setExtraImages([]);
       setPreview(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong.');
+      setErrors({ server: err.response?.data?.message || 'Something went wrong.' });
     } finally {
       setLoading(false);
+      setTimeout(() => setSuccess(''), 4000);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-100 dark:bg-gray-900">
-      <div className="w-full max-w-3xl bg-white dark:bg-gray-800 p-8 rounded-xl shadow-xl overflow-auto max-h-[95vh]">
-        <h2 className="text-3xl font-bold mb-6 text-center text-orange-600 dark:text-orange-400">Create Product</h2>
+    <div className="min-h-screen px-4 py-8 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+      <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-xl">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-orange-600">Create Product</h2>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            maxLength={100}
+            placeholder="Product Name *"
+            className="w-full p-3 rounded-xl border bg-transparent text-gray-800 dark:text-white"
+          />
+          {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
 
-          {/* Text Inputs */}
-          <input name="name" value={form.name} onChange={handleChange} placeholder="Product Name *"
-            className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white" />
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            rows={3}
+            maxLength={2000}
+            placeholder="Description"
+            className="w-full p-3 rounded-xl border bg-transparent text-gray-800 dark:text-white"
+          />
+          {errors.description && <div className="text-sm text-red-600">{errors.description}</div>}
 
-          <textarea name="description" value={form.description} onChange={handleChange} placeholder="Description" rows={3}
-            className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white" />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <input
+              name="price"
+              type="number"
+              value={form.price}
+              onChange={handleChange}
+              placeholder="Price *"
+              min="0"
+              className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white"
+            />
+            <input
+              name="lastPrice"
+              type="number"
+              value={form.lastPrice}
+              onChange={handleChange}
+              placeholder="Last Price (optional)"
+              min="0"
+              className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white"
+            />
+          </div>
+          {errors.price && <div className="text-sm text-red-600">{errors.price}</div>}
+          {errors.lastPrice && <div className="text-sm text-red-600">{errors.lastPrice}</div>}
 
-          <input name="price" type="number" value={form.price} onChange={handleChange} placeholder="Price *" min="0" step="0.01"
-            className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white" />
-
-          <input name="lastPrice" type="number" value={form.lastPrice} onChange={handleChange} placeholder="Last Price (optional)" min="0" step="0.01"
-            className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white" />
-
-          <select name="condition" value={form.condition} onChange={handleChange}
-            className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white">
+          <select
+            name="condition"
+            value={form.condition}
+            onChange={handleChange}
+            className="w-full p-3 rounded-xl border bg-transparent text-gray-800 dark:text-white"
+          >
             <option value="">Condition (optional)</option>
             <option value="new">New</option>
             <option value="old">Old</option>
             <option value="other">Other</option>
           </select>
 
-          {/* Sizes */}
           <div>
-            <div className="flex gap-2 mb-2">
+            <div className="flex flex-col sm:flex-row gap-2 mb-2">
               <input
                 value={sizeInput}
+                ref={sizeInputRef}
                 onChange={(e) => setSizeInput(e.target.value)}
-                placeholder="Add size (e.g., M, 42)"
-                className="flex-1 p-3 border rounded-xl bg-transparent text-gray-800 dark:text-white"
+                placeholder="Add size"
+                className="flex-1 p-2 border rounded-xl bg-transparent text-gray-800 dark:text-white"
               />
               <button
                 type="button"
                 onClick={addSize}
-                className="bg-orange-600 text-white px-4 rounded-xl flex items-center gap-1"
+                className="bg-orange-600 text-white px-4 rounded-xl flex items-center justify-center gap-1"
               >
-                <Plus size={16} /> Add
+                <FiPlus /> Add
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {sizes.map((s, i) => (
-                <span
-                  key={i}
-                  className="px-3 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded-full text-sm flex items-center gap-1"
-                >
+                <span key={i} className="px-3 py-1 bg-orange-200 dark:bg-orange-700 text-sm rounded-full flex items-center">
                   {s}
-                  <X size={12} onClick={() => removeSize(s)} className="cursor-pointer" />
+                  <FiX onClick={() => removeSize(s)} className="ml-1 cursor-pointer" />
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Main Image */}
           <div>
-            <label className="block text-sm mb-1">Main Image *</label>
-            <label className="block w-full border-2 border-dashed p-4 rounded-xl text-center cursor-pointer hover:border-orange-500">
+            <label className="block mb-1">Main Image *</label>
+            <label className="block w-full border-2 border-dashed p-4 rounded-xl text-center cursor-pointer">
               {preview ? (
                 <img src={preview} alt="Preview" className="mx-auto max-h-64 object-contain" />
               ) : (
-                <span className="text-gray-400 dark:text-gray-500">Click to upload main image (max 5MB)</span>
+                <span className="text-gray-400">Click to upload main image (max 5MB)</span>
               )}
               <input type="file" accept="image/*" onChange={handleMainImage} className="hidden" />
             </label>
+            {errors.mainImage && <div className="text-sm text-red-600">{errors.mainImage}</div>}
           </div>
 
-          {/* Extra Images */}
           <div>
-            <label className="block text-sm mb-1">Extra Images (max 5)</label>
-            <input type="file" accept="image/*" multiple onChange={handleExtraImages}
-              className="w-full p-2 border rounded-md text-sm bg-transparent text-gray-800 dark:text-white" />
-            <div className="flex gap-2 mt-3 flex-wrap">
+            <label className="block mb-1">Extra Images (max 5)</label>
+            <input type="file" accept="image/*" multiple onChange={handleExtraImages} className="w-full p-2" />
+            <div className="flex flex-wrap gap-2 mt-2">
               {extraImages.map((img, i) => (
-                <div key={i} className="relative group">
+                <div key={i} className="relative">
                   <img src={URL.createObjectURL(img)} className="h-16 w-16 object-cover rounded-md" alt={`Extra ${i}`} />
-                  <button type="button" onClick={() => removeExtraImage(i)}
-                    className="absolute top-0 right-0 bg-red-600 text-white p-1 rounded-full">
-                    <X size={14} />
+                  <button
+                    type="button"
+                    onClick={() => removeExtraImage(i)}
+                    className="absolute top-0 right-0 bg-red-600 text-white p-1 rounded-full"
+                  >
+                    <FiX size={12} />
                   </button>
                 </div>
               ))}
             </div>
+            {errors.extraImages && <div className="text-sm text-red-600">{errors.extraImages}</div>}
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-red-100 text-red-800 rounded-lg dark:bg-red-950 dark:text-red-300">
-              {error}
-            </div>
-          )}
+          {errors.server && <div className="text-red-600">{errors.server}</div>}
+          {success && <div className="text-green-600">{success}</div>}
 
-          {/* Submit */}
-          <button type="submit" disabled={loading}
-            className="w-full py-4 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-50"
+          >
             {loading ? 'Creating...' : 'Create Product'}
           </button>
         </form>
-        <div className='min-h-32'>
-
-        </div>
       </div>
-      
     </div>
   );
 }

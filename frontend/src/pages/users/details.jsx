@@ -188,7 +188,7 @@ export default function ProductDetail() {
   );
 
   const handleBuyNow = () => {
-    navigate(`/checkout/${id}?quantity=${quantity}`);
+    navigate(`/checkout/${id}`);
   };
 
   const toggleWishlist = () => {
@@ -214,7 +214,7 @@ export default function ProductDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Gallery Section */}
           <div className="space-y-6">
-            <div className="relative aspect-[4/5] h-[600px] object-cover rounded-3xl overflow-hidden shadow-2xl bg-white">
+            <div className="relative max-h-[600px] object-contain rounded-3xl overflow-hidden shadow-2xl dark:bg-slate-900 bg-white">
               <motion.div
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
@@ -321,31 +321,39 @@ export default function ProductDetail() {
           {/* Product Info Section */}
           <div className="space-y-6 sticky top-8">
             <div className="flex items-start justify-between">
-              <h1 className="text-4xl font-bold text-gray-800">{product.name}</h1>
+              <h1 className="text-4xl font-bold text-gray-800 dark:text-white">{product.name}</h1>
             </div>
 
             <PriceDisplay price={product.price} lastPrice={product.lastPrice} />
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full">
+            {product.condition && (
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-gray-500">Condition</span>
+                <span className="font-medium capitalize">{product.condition}</span>
+               
+              </div>
+            )}
+            {/* on next version will be available */}
+            {/* <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full dark:bg-gray-800">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-1 hover:bg-gray-200 rounded-full"
+                  className="p-1 hover:bg-gray-200 rounded-full dark:hover:bg-gray-900"
                 >
                   <FiMinus size={18} />
                 </button>
                 <span className="w-8 text-center font-medium">{quantity}</span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="p-1 hover:bg-gray-200 rounded-full"
+                  className="p-1 hover:bg-gray-200 rounded-full dark:hover:bg-gray-900"
                 >
                   <FiPlus size={18} />
                 </button>
               </div>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-white">
                 {product.stock} items available
               </span>
-            </div>
+            </div> */}
 
             <div className="flex gap-4">
               <button
@@ -357,18 +365,18 @@ export default function ProductDetail() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-3">
+              <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-3 dark:bg-gray-800">
                 <FiTruck className="text-orange-500 text-2xl" />
                 <div>
                   <p className="font-medium">Free Shipping</p>
                   <p className="text-sm text-gray-500">Delivery in 3-5 days</p>
                 </div>
               </div>
-              <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-3">
+              <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-3 dark:bg-gray-800">
                 <TbArrowsExchange className="text-orange-500 text-2xl" />
                 <div>
                   <p className="font-medium">Easy Returns</p>
-                  <p className="text-sm text-gray-500">30-day return policy</p>
+                  <p className="text-sm text-gray-500">-day return policy</p>
                 </div>
               </div>
             </div>
@@ -401,20 +409,32 @@ export default function ProductDetail() {
                 />
               )}
 
-              {activeTab === "specs" && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="space-y-3"
-                >
-                  {Object.entries(product.specifications || {}).map(([key, value]) => (
-                    <div key={key} className="flex justify-between py-2 border-b">
-                      <span className="text-gray-500">{key}</span>
-                      <span className="font-medium">{value}</span>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
+            {activeTab === "specs" && (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    className="space-y-4"
+  >
+    {Array.isArray(product.specs) && product.specs.length > 0 ? (
+      <div>
+        <h3 className="text-lg font-semibold mb-3">Available Options</h3>
+        <ul className="flex flex-wrap gap-3">
+          {product.specs.map((item, idx) => (
+            <li
+              key={idx}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 cursor-pointer hover:bg-orange-500 hover:text-white transition"
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <p className="text-gray-500 italic">No specifications available.</p>
+    )}
+  </motion.div>
+)}
+
 
               {activeTab === "reviews" && (
                 <motion.div

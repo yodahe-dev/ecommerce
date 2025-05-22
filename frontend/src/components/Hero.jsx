@@ -53,7 +53,7 @@ export default function Hero() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mt-6">
           <Link
-            to="/category"
+            to="/search"
             className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition"
           >
             Browse Products

@@ -85,7 +85,7 @@ module.exports = {
       lastPrice: product.lastPrice,
       imageUrl: product.mainImage,
       extraImages: product.extraImages,
-      sizes: product.sizes,
+      specs: product.sizes,
       shippingPrice: product.shippingPrice,
       condition: product.condition,
       createdAt: product.createdAt,

@@ -193,7 +193,7 @@ export default function Search() {
               return (
                 <div
                   key={product.id}
-                  onClick={() => navigate(`/products/${product.id}`)}
+                  onClick={() => navigate(`/product/${product.id}`)}
                   className="relative bg-white dark:bg-slate-800 rounded-2xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden"
                 >
                   {discount && (
@@ -233,7 +233,7 @@ export default function Search() {
                         Buy Now
                       </button>
                       <button
-                        onClick={() => navigate(`/products/${product.id}`)}
+                        onClick={() => navigate(`/product/${product.id}`)}
                         className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 text-sm py-2 px-4 rounded-lg"
                       >
                         Details
@@ -251,7 +251,7 @@ export default function Search() {
               return (
                 <div
                   key={product.id}
-                  onClick={() => navigate(`/products/${product.id}`)}
+                  onClick={() => navigate(`/product/${product.id}`)}
                   className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer"
                 >
                   <img src={product.imageUrl} alt={product.name} className="w-20 h-20 object-cover rounded-xl" />

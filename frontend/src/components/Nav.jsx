@@ -61,7 +61,7 @@ export default function Nav({
           <div className="hidden md:flex items-center space-x-6">
             <NavLink to="/" label="Home" />
             <NavLink to="/search" label="Search" />
-            <NavLink to="/category" label="Category" />
+            <NavLink to="/products" label="products" />
             <NavLink to="/about" label="About" />
 
             {/* Cart */}

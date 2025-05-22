@@ -15,6 +15,7 @@ import Catagory from "./pages/users/Catagory";
 import About from "./pages/users/About";
 import Search from "./pages/users/Search";
 import ProductDetail from "./pages/users/details"; // ✅ NEW
+import Checkout from "./pages/users/Checkout";
 
 function App() {
   const [token, setToken] = useState("");
@@ -137,9 +138,11 @@ function App() {
           {/* Public pages */}
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/category" element={<Catagory />} />
+          <Route path="/products" element={<Catagory />} />
           <Route path="/about" element={<About />} />
           <Route path="/product/:id" element={<ProductDetail />} /> {/* ✅ Product detail route */}
+          <Route path="/checkout/:Id" element={<Checkout />} />
+
 
           {/* Auth-only user profile */}
           <Route path="/account" element={<ProtectedRoute isAuthenticated={!!token}><Profile token={token} darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />

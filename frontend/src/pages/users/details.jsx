@@ -333,7 +333,7 @@ export default function ProductDetail() {
                
               </div>
             )}
-            {/* on next version will be available */}
+            {/* on next version will be available this is mvp so no need on the vesion*/}
             {/* <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full dark:bg-gray-800">
                 <button

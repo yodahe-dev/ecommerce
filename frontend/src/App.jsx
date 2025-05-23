@@ -14,12 +14,12 @@ import Home from "./pages/users/Home";
 import Catagory from "./pages/users/Catagory";
 import About from "./pages/users/About";
 import Search from "./pages/users/Search";
-import ProductDetail from "./pages/users/details"; // ✅ NEW
+import ProductDetail from "./pages/users/details";
 import Checkout from "./pages/users/Checkout";
 
 function App() {
   const [token, setToken] = useState("");
-  const [email, setEmail] = useState("");
+  const [user, setUser] = useState(null);
   const [darkMode, setDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -29,26 +29,35 @@ function App() {
     const init = async () => {
       try {
         const storedToken = localStorage.getItem("token");
-        const storedEmail = localStorage.getItem("email");
         const theme = localStorage.getItem("theme");
 
         if (storedToken) {
           setToken(storedToken);
-          await fetchAndSaveUserId(storedToken);
+          const profile = await getProfile(storedToken);
+          if (profile?.id) {
+            setUser(profile);
+            localStorage.setItem("user_id", profile.id);
+          } else {
+            throw new Error("Invalid profile");
+          }
         }
 
-        if (storedEmail) setEmail(storedEmail);
         setDarkMode(theme ? theme === "dark" : true);
       } catch (err) {
         console.error("App init failed", err);
         setHasError(true);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user_id");
+        setToken("");
+        setUser(null);
+        navigate("/login");
       } finally {
         setIsLoading(false);
       }
     };
 
     init();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -61,28 +70,15 @@ function App() {
     }
   }, [darkMode]);
 
-  const fetchAndSaveUserId = async (token) => {
-    try {
-      const user = await getProfile(token);
-      if (user?.id) {
-        localStorage.setItem("user_id", user.id);
-      }
-    } catch (err) {
-      console.error("Fetch user failed", err);
-      localStorage.removeItem("token");
-      localStorage.removeItem("user_id");
-      setToken("");
-      navigate("/login");
-    }
-  };
-
   const handleLogin = async (newToken, newEmail) => {
     try {
       localStorage.setItem("token", newToken);
-      localStorage.setItem("email", newEmail);
       setToken(newToken);
-      setEmail(newEmail);
-      await fetchAndSaveUserId(newToken);
+      const profile = await getProfile(newToken);
+      if (profile?.id) {
+        setUser(profile);
+        localStorage.setItem("user_id", profile.id);
+      }
       navigate("/");
     } catch (err) {
       console.error("Login failed", err);
@@ -94,7 +90,7 @@ function App() {
     localStorage.removeItem("token");
     localStorage.removeItem("user_id");
     setToken("");
-    setEmail("");
+    setUser(null);
     navigate("/login");
   };
 
@@ -118,7 +114,7 @@ function App() {
     <div className={darkMode ? "dark" : ""}>
       <Nav
         isAuthenticated={!!token}
-        userEmail={email}
+        userEmail={user?.email || ""}
         onLogout={handleLogout}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
@@ -126,34 +122,100 @@ function App() {
 
       <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
         <Routes>
-
           {/* Public routes */}
-          <Route path="/signup" element={<PublicOnlyRoute isAuthenticated={!!token}><Signup /></PublicOnlyRoute>} />
-          <Route path="/login" element={<PublicOnlyRoute isAuthenticated={!!token}><Login onLogin={handleLogin} /></PublicOnlyRoute>} />
+          <Route
+            path="/signup"
+            element={
+              <PublicOnlyRoute isAuthenticated={!!token}>
+                <Signup />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute isAuthenticated={!!token}>
+                <Login onLogin={handleLogin} />
+              </PublicOnlyRoute>
+            }
+          />
 
           {/* Seller only routes */}
-          <Route path="/upload" element={<ProtectedRoute isAuthenticated={!!token}><CreateProduct /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute isAuthenticated={!!token}><SellerProfile /></ProtectedRoute>} />
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute
+                isAuthenticated={!!token}
+                userRole={user?.role?.name}
+                requiredRoles={["seller"]}
+              >
+                <CreateProduct />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute
+                isAuthenticated={!!token}
+                userRole={user?.role?.name}
+                requiredRoles={["seller"]}
+              >
+                <SellerProfile />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Public pages */}
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/products" element={<Catagory />} />
           <Route path="/about" element={<About />} />
-          <Route path="/product/:id" element={<ProductDetail />} /> {/* ✅ Product detail route */}
-          <Route path="/checkout/:id" element={<ProtectedRoute isAuthenticated={!!token}><Checkout /></ProtectedRoute>} />
+          <Route path="/product/:id" element={<ProductDetail />} />
 
+          {/* Checkout for any logged-in user */}
+          <Route
+            path="/checkout/:id"
+            element={
+              <ProtectedRoute
+                isAuthenticated={!!token}
+                userRole={user?.role?.name}
+              >
+                <Checkout />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Auth-only user profile */}
-          <Route path="/account" element={<ProtectedRoute isAuthenticated={!!token}><Profile token={token} darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute
+                isAuthenticated={!!token}
+                userRole={user?.role?.name}
+              >
+                <Profile
+                  token={token}
+                  darkMode={darkMode}
+                  setDarkMode={setDarkMode}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin-only route example */}
+          {/* You can add other admin or manager routes with requiredRoles */}
 
           {/* Fallback 404 */}
-          <Route path="*" element={
-            <div className="flex flex-col justify-center text-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-              <p className="text-3xl">404 - Page Not Found</p>
-              <p className="font-extrabold text-9xl">😒</p>
-            </div>
-          } />
+          <Route
+            path="*"
+            element={
+              <div className="flex flex-col justify-center text-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
+                <p className="text-3xl">404 - Page Not Found</p>
+                <p className="font-extrabold text-9xl">😒</p>
+              </div>
+            }
+          />
         </Routes>
       </main>
     </div>

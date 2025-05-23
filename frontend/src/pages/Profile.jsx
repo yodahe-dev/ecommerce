@@ -75,6 +75,11 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                 </button>
                 {copySuccess && <span className="text-sm text-green-500">{copySuccess}</span>}
               </div>
+              {/* inside the profile header, below the email */}
+<div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+  Role: <span className="font-medium">{user.role?.name || 'N/A'}</span>
+</div>
+
             </div>
           </div>
 

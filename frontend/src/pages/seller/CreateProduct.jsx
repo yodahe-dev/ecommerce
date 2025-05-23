@@ -206,7 +206,7 @@ export default function CreateProduct() {
                 value={sizeInput}
                 ref={sizeInputRef}
                 onChange={(e) => setSizeInput(e.target.value)}
-                placeholder="Add size"
+                placeholder="size color or other"
                 className="flex-1 p-2 border rounded-xl bg-transparent text-gray-800 dark:text-white"
               />
               <button

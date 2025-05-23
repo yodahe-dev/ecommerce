@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 
+const API = "http://localhost:5000/api";
+
 const Checkout = () => {
-  const [darkMode, setDarkMode] = useState(false);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
@@ -10,7 +11,58 @@ const Checkout = () => {
   const [deliveryAllowed, setDeliveryAllowed] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Reverse geocode function using OpenStreetMap
+  const [notes, setNotes] = useState([]);
+  const [inputNote, setInputNote] = useState("");
+
+  // Product info
+  const [productId, setProductId] = useState(null);
+  const [productName, setProductName] = useState("");
+  const [productPrice, setProductPrice] = useState(0);
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [productError, setProductError] = useState("");
+
+  // Get userId from localStorage
+  const userId = localStorage.getItem("user_id") || "";
+
+  useEffect(() => {
+    const url = window.location.href;
+    const match = url.match(/\/checkout\/([a-zA-Z0-9\-]+)/);
+    if (match && match[1]) {
+      const id = match[1];
+      setProductId(id);
+
+      setLoadingProduct(true);
+      fetch(`${API}/products/${id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch product");
+          return res.json();
+        })
+        .then((data) => {
+          setProductName(data.name || "Unknown Product");
+          setProductPrice(data.price || 0);
+          setLoadingProduct(false);
+        })
+        .catch(() => {
+          setProductName("Unknown Product");
+          setProductPrice(0);
+          setProductError("Failed to load product data");
+          setLoadingProduct(false);
+        });
+    }
+  }, []);
+
+  const addNote = () => {
+    const trimmed = inputNote.trim();
+    if (trimmed && !notes.includes(trimmed)) {
+      setNotes([...notes, trimmed]);
+      setInputNote("");
+    }
+  };
+
+  const removeNote = (noteToRemove) => {
+    setNotes(notes.filter((n) => n !== noteToRemove));
+  };
+
   const getAddressFromCoords = async (lat, lng) => {
     try {
       const res = await fetch(
@@ -57,6 +109,41 @@ const Checkout = () => {
     );
   };
 
+  const makePayment = async () => {
+    if (!productId) return alert("Product not selected");
+    if (!userId) return alert("User not logged in");
+
+    const payload = {
+      userId,
+      productId,
+      productName,
+      amount: productPrice,
+      phone,
+      email,
+      address,
+      notes,
+    };
+
+    try {
+      const res = await fetch(`${API}/payment/initiate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert("Payment initiation failed: " + (data.message || "Unknown error"));
+      }
+    } catch (error) {
+      alert("Error starting payment");
+      console.error(error);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!phone) {
@@ -67,26 +154,25 @@ const Checkout = () => {
       alert("Delivery not available in your area");
       return;
     }
-    // submit the order or continue checkout flow here
-    alert("Order placed!");
+    makePayment();
   };
 
   return (
-    <div
-      className={`min-h-screen flex items-center justify-center px-4 py-8 ${
-        darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"
-      }`}
-    >
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8">
+      <div className="max-w-md w-full rounded-lg shadow-md p-6 bg-gray-300 dark:bg-gray-800">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Checkout</h2>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700"
-          >
-            {darkMode ? "Light" : "Dark"}
-          </button>
         </div>
+
+        {loadingProduct && <p>Loading product...</p>}
+        {productError && <p className="text-red-600">{productError}</p>}
+
+        {!loadingProduct && !productError && productName && (
+          <div className="mb-4 text-center">
+            <h3 className="text-xl font-semibold">{productName}</h3>
+            <p className="text-lg">Price: {productPrice} ETB</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -106,7 +192,7 @@ const Checkout = () => {
 
           <div>
             <label className="block mb-1 font-medium" htmlFor="email">
-              Email (optional)
+              Email Receiver (optional)
             </label>
             <input
               id="email"
@@ -119,18 +205,40 @@ const Checkout = () => {
           </div>
 
           <div>
-            <label className="block mb-1 font-medium" htmlFor="address">
-              Address <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter your delivery address"
-              rows={3}
-              required
-              className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-            />
+            <label className="block mb-1 font-medium">Order Notes (optional)</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {notes.map((note) => (
+                <span
+                  key={note}
+                  className="bg-gray-200 dark:bg-gray-600 text-sm px-2 py-1 rounded-full flex items-center"
+                >
+                  {note}
+                  <button
+                    type="button"
+                    onClick={() => removeNote(note)}
+                    className="ml-2 text-red-500 hover:text-red-700"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputNote}
+                onChange={(e) => setInputNote(e.target.value)}
+                placeholder="e.g. black, size XL, no onions"
+                className="flex-1 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={addNote}
+                className="px-4 py-2 bg-gray-600 text-white rounded"
+              >
+                Add
+              </button>
+            </div>
           </div>
 
           <button
@@ -144,15 +252,12 @@ const Checkout = () => {
 
           {coords && (
             <div className="text-sm mt-2">
-              <strong>Coordinates:</strong> {coords.lat.toFixed(4)},{" "}
-              {coords.lng.toFixed(4)}
+              <strong>Coordinates:</strong> {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
             </div>
           )}
 
           {message && (
-            <div className="mt-3 text-center text-red-500 font-medium">
-              {message}
-            </div>
+            <div className="mt-3 text-center text-red-500 font-medium">{message}</div>
           )}
 
           <button
@@ -164,13 +269,13 @@ const Checkout = () => {
                 : "bg-gray-400 cursor-not-allowed text-gray-700"
             }`}
           >
-            Place Order
+            Pay Now
           </button>
         </form>
 
         {!deliveryAllowed && address && (
           <p className="mt-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-            Delivery available only in Addis Ababa.
+            Delivery available only in Addis Ababa <br /> (coming soon in all Ethiopian regions).
           </p>
         )}
       </div>

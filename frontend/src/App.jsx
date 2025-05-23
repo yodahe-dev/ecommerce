@@ -141,7 +141,7 @@ function App() {
           <Route path="/products" element={<Catagory />} />
           <Route path="/about" element={<About />} />
           <Route path="/product/:id" element={<ProductDetail />} /> {/* ✅ Product detail route */}
-          <Route path="/checkout/:id" element={<Checkout />} />
+          <Route path="/checkout/:id" element={<ProtectedRoute isAuthenticated={!!token}><Checkout /></ProtectedRoute>} />
 
 
           {/* Auth-only user profile */}

@@ -5,44 +5,34 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    userId: {
-      type: DataTypes.UUID,
+    chapaTxRef: {
+      type: DataTypes.STRING,
       allowNull: false,
-      references: {
-        model: 'Users', 
-        key: 'id',
-      },
+      unique: true,
+    },
+    status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'initiated',
     },
     amount: {
       type: DataTypes.FLOAT,
       allowNull: false,
     },
-    paymentMethod: {
+    currency: {
       type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'Chapa', // Assuming Chapa is the payment gateway
+      defaultValue: 'ETB',
     },
-    status: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'pending', // Can be 'pending', 'completed', 'failed'
-    },
-    transactionId: {
-      type: DataTypes.STRING,
+    rawResponse: {
+      type: DataTypes.JSON, // ✅ fixed here
       allowNull: true,
     },
-    paymentDate: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-  }, {
-    timestamps: true,
   });
 
   Payment.associate = (models) => {
-    Payment.belongsTo(models.User, {
-      foreignKey: 'userId',
-      as: 'user',
+    Payment.hasOne(models.Order, {
+      foreignKey: 'paymentId',
+      as: 'order',
     });
   };
 

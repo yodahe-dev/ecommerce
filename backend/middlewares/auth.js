@@ -14,9 +14,6 @@ const auth = (req, res, next) => {
   }
 };
 
-module.exports = auth;
-
-// middleware/auth.js
 const checkRole = (roles) => {
   return (req, res, next) => {
     if (roles.includes(req.user.role)) {
@@ -26,4 +23,4 @@ const checkRole = (roles) => {
   };
 };
 
-module.exports = { checkRole };
+module.exports = { auth, checkRole };

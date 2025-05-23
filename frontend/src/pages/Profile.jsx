@@ -66,7 +66,7 @@ export default function Profile({ token, darkMode, setDarkMode }) {
             <div>
               <h1 className="text-3xl font-bold">{user.username}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
+                <p className="text-gray-600 dark:text-gray-400">{user.email}</p>                
                 <button
                   onClick={copyEmail}
                   className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"

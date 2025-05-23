@@ -24,14 +24,27 @@ module.exports = (sequelize, DataTypes) => {
     orderStatus: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'pending', // Can be 'pending', 'completed', 'canceled'
+      defaultValue: 'pending',
     },
-    totalAmount: {
-      type: DataTypes.FLOAT,
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      get() {
+        const rawValue = this.getDataValue('notes');
+        return rawValue ? JSON.parse(rawValue) : [];
+      },
+      set(value) {
+        this.setDataValue('notes', JSON.stringify(value));
+      }
+    },
+    address: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
-  }, {
-    timestamps: true,
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   });
 
   Order.associate = (models) => {
@@ -39,15 +52,10 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'userId',
       as: 'user',
     });
+
     Order.belongsTo(models.Payment, {
       foreignKey: 'paymentId',
       as: 'payment',
-    });
-
-    // Linking the Order to Cart (assuming each Order can have many Cart items)
-    Order.hasMany(models.Cart, {
-      foreignKey: 'orderId', // Make sure Cart model has 'orderId' field
-      as: 'carts',
     });
   };
 

@@ -4,9 +4,10 @@ import axios from 'axios';
 import debounce from 'lodash.debounce';
 import Fuse from 'fuse.js';
 import { FiGrid, FiList, FiShoppingCart } from 'react-icons/fi';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaHeart, FaRegHeart } from 'react-icons/fa';
 
 const API = 'http://localhost:5000/api';
+const fallbackImage = "/src/assets/hero/for.jpg";
 
 const formatPrice = (price) => price?.toLocaleString();
 
@@ -35,8 +36,9 @@ export default function Search() {
     const saved = localStorage.getItem('cart');
     return saved ? JSON.parse(saved) : [];
   });
-
+  const [likedProducts, setLikedProducts] = useState({});
   const navigate = useNavigate();
+  const currentUserId = localStorage.getItem("user_id");
   const abortControllerRef = useRef(null);
 
   const fuse = useMemo(() => new Fuse([], {
@@ -45,12 +47,55 @@ export default function Search() {
     includeScore: true,
   }), []);
 
+  useEffect(() => {
+    axios.get(`${API}/products`)
+      .then(res => setProducts(res.data))
+      .catch(err => console.error("Error fetching products:", err));
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    products.forEach(product => {
+      axios.post(`${API}/isLiked`, {
+        userId: currentUserId,
+        productId: product.id,
+      })
+      .then(res => {
+        setLikedProducts(prev => ({
+          ...prev,
+          [product.id]: res.data.liked,
+        }));
+      })
+      .catch(err => console.error("Error checking like status:", err));
+    });
+  }, [products, currentUserId]);
+
+  const toggleLike = async (e, productId) => {
+    e.stopPropagation();
+    if (!currentUserId) {
+      alert("You must be logged in to like a product.");
+      return;
+    }
+
+    const liked = likedProducts[productId];
+
+    try {
+      if (liked) {
+        await axios.post(`${API}/unlike`, { userId: currentUserId, productId });
+      } else {
+        await axios.post(`${API}/like`, { userId: currentUserId, productId });
+      }
+      setLikedProducts(prev => ({ ...prev, [productId]: !liked }));
+    } catch (error) {
+      console.error("Error toggling like:", error);
+    }
+  };
+
   const buyNow = (product) => {
-    const exists = cart.find((item) => item.id === product.id);
+    const exists = cart.find(item => item.id === product.id);
     const updatedCart = exists
-      ? cart.map((item) =>
-          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-        )
+      ? cart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item)
       : [...cart, { ...product, qty: 1 }];
 
     setCart(updatedCart);
@@ -58,47 +103,39 @@ export default function Search() {
     navigate(`/checkout/${product.id}`);
   };
 
-  const fetchProducts = useCallback(
-    debounce(async (query, sortKey) => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      abortControllerRef.current = new AbortController();
+  const fetchProducts = useCallback(debounce(async (query, sortKey) => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
 
-      try {
-        setLoading(true);
-        setError('');
-        const { sortBy, order } = sortOptions[sortKey] || sortOptions.newest;
+    try {
+      setLoading(true);
+      setError('');
+      const { sortBy, order } = sortOptions[sortKey] || sortOptions.newest;
 
-        const res = await axios.get(`${API}/products`, {
-          params: { search: query, sortBy, order },
-          signal: abortControllerRef.current.signal,
-        });
+      const res = await axios.get(`${API}/products`, {
+        params: { search: query, sortBy, order },
+        signal: abortControllerRef.current.signal,
+      });
 
-        setProducts(res.data);
-      } catch (err) {
-        if (!axios.isCancel(err)) setError('Failed to fetch products');
-      } finally {
-        setLoading(false);
-      }
-    }, 300),
-    []
-  );
+      setProducts(res.data);
+    } catch (err) {
+      if (!axios.isCancel(err)) setError('Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
+  }, 300), []);
 
-  const fetchSuggestions = useCallback(
-    debounce(async (query) => {
-      if (!query) return setSuggestions([]);
-      try {
-        const { data } = await axios.get(`${API}/products`, { params: { limit: 50 } });
-        fuse.setCollection(data);
-        const results = fuse.search(query).slice(0, 5).map((r) => r.item);
-        setSuggestions(results);
-      } catch {
-        setSuggestions([]);
-      }
-    }, 200),
-    [fuse]
-  );
+  const fetchSuggestions = useCallback(debounce(async (query) => {
+    if (!query) return setSuggestions([]);
+    try {
+      const { data } = await axios.get(`${API}/products`, { params: { limit: 50 } });
+      fuse.setCollection(data);
+      const results = fuse.search(query).slice(0, 5).map(r => r.item);
+      setSuggestions(results);
+    } catch {
+      setSuggestions([]);
+    }
+  }, 200), [fuse]);
 
   useEffect(() => {
     fetchProducts(searchQuery, sortBy);
@@ -123,19 +160,14 @@ export default function Search() {
     );
   };
 
-  const fallbackImage = "/src/assets/hero/for.jpg";
-
   const renderGridCard = (product) => {
+    const liked = likedProducts[product.id];
     const discount = getDiscountPercent(product.lastPrice, product.price);
     return (
-      <div
-        key={product.id}
-        onClick={() => navigate(`/product/${product.id}`)}
-        className="relative bg-white dark:bg-slate-800 rounded-2xl shadow hover:shadow-lg transition cursor-pointer"
-      >
+      <div key={product.id} onClick={() => navigate(`/product/${product.id}`)} className="relative bg-white dark:bg-slate-800 rounded-2xl shadow hover:shadow-lg transition cursor-pointer">
         {discount && (
           <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded shadow z-10">
-            discount {discount}
+            {discount}
           </div>
         )}
         <img
@@ -171,6 +203,14 @@ export default function Search() {
             >
               Details
             </button>
+            <button
+              onClick={e => toggleLike(e, product.id)}
+              className="text-red-600 p-2 rounded hover:border-orange-600"
+              aria-label={liked ? "Unlike" : "Like"}
+              title={liked ? "Unlike" : "Like"}
+            >
+              {liked ? <FaHeart size={20} /> : <FaRegHeart size={20} />}
+            </button>
           </div>
         </div>
       </div>
@@ -178,13 +218,9 @@ export default function Search() {
   };
 
   const renderListCard = (product) => {
-    const discount = getDiscountPercent(product.lastPrice, product.price);
+    const liked = likedProducts[product.id];
     return (
-      <div
-        key={product.id}
-        onClick={() => navigate(`/product/${product.id}`)}
-        className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer"
-      >
+      <div key={product.id} onClick={() => navigate(`/product/${product.id}`)} className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer">
         <img
           src={product.imageUrl || fallbackImage}
           alt={product.name}
@@ -196,14 +232,11 @@ export default function Search() {
           {renderPriceInfo(product)}
           <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">{product.description}</p>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            buyNow(product);
-          }}
-          className="px-3 py-2 flex items-center gap-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600"
-        >
+        <button onClick={(e) => { e.stopPropagation(); buyNow(product); }} className="px-3 py-2 flex items-center gap-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600">
           <FiShoppingCart /> Buy Now
+        </button>
+        <button onClick={e => toggleLike(e, product.id)} className="text-red-600 p-2 rounded hover:border-orange-600">
+          {liked ? <FaHeart size={20} /> : <FaRegHeart size={20} />}
         </button>
       </div>
     );
@@ -218,16 +251,12 @@ export default function Search() {
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search products..."
-              className="w-full pl-12 pr-6 py-4 rounded-2xl border-0 ring-2 ring-gray-200 dark:ring-gray-700 focus:ring-3 focus:ring-orange-500 bg-transparent text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" 
+              className="w-full pl-12 pr-6 py-4 rounded-2xl ring-2 ring-gray-200 dark:ring-gray-700 bg-transparent text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
             {suggestions.length > 0 && (
               <div className="absolute z-30 mt-2 w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
                 {suggestions.map((product) => (
-                  <div
-                    key={product.id}
-                    onClick={() => navigate(`/product/${product.id}`)}  
-                    className="flex items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                  >
+                  <div key={product.id} onClick={() => navigate(`/product/${product.id}`)} className="flex items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
                     <img
                       src={product.imageUrl || fallbackImage}
                       alt={product.name}
@@ -291,7 +320,6 @@ export default function Search() {
             {products.map(renderListCard)}
           </div>
         )}
-        <div className="min-h-52" />
       </div>
     </div>
   );

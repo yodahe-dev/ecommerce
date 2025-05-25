@@ -17,6 +17,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: false,
     },
+    quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1, // Default to 1 if no quantity is specified
+      validate: {
+        min: 1,
+      },
+    },
     lastPrice: {
       type: DataTypes.FLOAT,
       allowNull: true,

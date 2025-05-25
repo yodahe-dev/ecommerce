@@ -1,4 +1,3 @@
-// CreateProduct.jsx
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +10,7 @@ export default function CreateProduct() {
     name: '',
     description: '',
     price: '',
+    quantity: '',
     lastPrice: '',
     condition: '',
   });
@@ -112,6 +112,7 @@ export default function CreateProduct() {
     data.append('name', form.name);
     data.append('description', form.description);
     data.append('price', form.price);
+    data.append('quantity', form.quantity);
     if (form.lastPrice) data.append('lastPrice', form.lastPrice);
     if (form.condition) data.append('condition', form.condition);
     if (sizes.length > 0) data.append('sizes', JSON.stringify(sizes));
@@ -125,7 +126,7 @@ export default function CreateProduct() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSuccess('Product created.');
-      setForm({ name: '', description: '', price: '', lastPrice: '', condition: '' });
+      setForm({ name: '', description: '', price: '', quantity: '', lastPrice: '', condition: '' });
       setSizes([]);
       setMainImage(null);
       setExtraImages([]);
@@ -184,7 +185,17 @@ export default function CreateProduct() {
               min="0"
               className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white"
             />
+            <input
+              name="quantity"
+              type="number"
+              value={form.quantity}
+              onChange={handleChange}
+              placeholder="quantity of your product (How much product you can provied)"
+              min="1"
+              className="w-full p-4 rounded-xl border bg-transparent text-gray-800 dark:text-white"
+            />
           </div>
+          {errors.quantity && <div className="text-sm text-red-600">{errors.quantity}</div>}
           {errors.price && <div className="text-sm text-red-600">{errors.price}</div>}
           {errors.lastPrice && <div className="text-sm text-red-600">{errors.lastPrice}</div>}
 
@@ -192,7 +203,7 @@ export default function CreateProduct() {
             name="condition"
             value={form.condition}
             onChange={handleChange}
-            className="w-full p-3 rounded-xl border bg-transparent text-gray-800 dark:text-white"
+            className="w-full p-3 rounded-xl border bg-transparent text-gray-800 dark:text-gray-500"
           >
             <option value="">Condition (optional)</option>
             <option value="new">New</option>

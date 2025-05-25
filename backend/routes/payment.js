@@ -11,12 +11,13 @@ router.post('/payment/initiate', async (req, res) => {
       productName,
       amount,
       phone,
-      email,
       address,
+      email,
       notes,
+      additionalphone,
     } = req.body;
 
-    if (!userId || !amount || !phone || !address) {
+    if (!userId || !productId || !amount || !phone || !address || !additionalphone) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -26,7 +27,7 @@ router.post('/payment/initiate', async (req, res) => {
       return res.status(400).json({ message: 'Invalid userId' });
     }
 
-    // Create payment record
+    // Create payment
     const chapaTxRef = `tx-${Date.now()}`;
     const payment = await Payment.create({
       chapaTxRef,
@@ -35,23 +36,25 @@ router.post('/payment/initiate', async (req, res) => {
       status: 'initiated',
     });
 
-    // Create order linked to payment
+    // Create order with all required fields
     const order = await Order.create({
       userId,
+      productId,
       paymentId: payment.id,
       orderStatus: 'pending',
       notes,
       address,
       phone,
+      addtionalphone: additionalphone, // typo in DB model: `addtionalphone`
     });
 
-    // Prepare Chapa payment init payload
+    // Prepare payload for Chapa
     const payload = {
       public_key: process.env.CHAPA_PUBLIC_KEY,
       tx_ref: chapaTxRef,
       amount: amount.toString(),
       currency: 'ETB',
-      redirect_url: `${process.env.CLIENT_URL}/payment-complete?orderId=${order.id}`, 
+      redirect_url: `${process.env.CLIENT_URL}/payment-complete?orderId=${order.id}`,
       customer: {
         email: email || 'noemail@example.com',
         phone_number: phone,
@@ -63,7 +66,7 @@ router.post('/payment/initiate', async (req, res) => {
       },
     };
 
-    // Call Chapa initialize transaction API
+    // Call Chapa API
     const chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
       method: 'POST',
       headers: {
@@ -79,10 +82,9 @@ router.post('/payment/initiate', async (req, res) => {
       return res.status(500).json({ message: 'Failed to initialize payment', details: chapaData });
     }
 
-    // Update payment with raw response if needed
+    // Update payment with full response
     await payment.update({ rawResponse: chapaData });
 
-    // Return Chapa checkout URL to frontend
     return res.json({ checkout_url: chapaData.data.checkout_url });
 
   } catch (error) {

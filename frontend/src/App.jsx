@@ -13,7 +13,7 @@ import SellerProfile from "./pages/seller/SellerProfile";
 import Home from "./pages/users/Home";
 import Catagory from "./pages/users/Catagory";
 import About from "./pages/users/About";
-import Search from "./pages/users/Search";
+import Contact from "./pages/users/contact";
 import ProductDetail from "./pages/users/details";
 import Checkout from "./pages/users/Checkout";
 
@@ -154,7 +154,7 @@ function App() {
             }
           />
           <Route
-            path="/dashboard"
+            path="/product"
             element={
               <ProtectedRoute
                 isAuthenticated={!!token}
@@ -168,7 +168,7 @@ function App() {
 
           {/* Public pages */}
           <Route path="/" element={<Home />} />
-          <Route path="/search" element={<Search />} />
+          <Route path="/contact" element={<Contact/>} />
           <Route path="/products" element={<Catagory />} />
           <Route path="/about" element={<About />} />
           <Route path="/product/:id" element={<ProductDetail />} />

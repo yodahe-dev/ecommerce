@@ -60,7 +60,7 @@ export default function Card() {
             key={product.id}
             onClick={() => handleDetails(product.id)}
             className="relative bg-white dark:bg-slate-800 rounded-2xl shadow hover:shadow-lg transition cursor-pointer overflow-hidden"
-            style={{ width: "100%", maxWidth: "320px" }}
+            style={{ width: "100%", maxWidth: "250px" }}
           >
             {/* Discount badge */}
             {discount && (
@@ -71,7 +71,7 @@ export default function Card() {
 
             {/* Product image */}
             <img
-              src={product.imageUrl || "/assets/default-image.png"}
+              src={product.imageUrl || "/src/assets/hero/for.jpg"}
               alt={product.name}
               onError={(e) => (e.target.src = "/assets/default-image.png")}
               className="w-full h-64 object-cover rounded-t-2xl"
@@ -85,10 +85,10 @@ export default function Card() {
 
               {/* Price */}
               {product.lastPrice ? (
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-orange-500 font-bold text-base">
+                {product.price} ETB
+                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                   <span className="line-through">{product.lastPrice} ETB</span>
-                  <span className="ml-2 text-orange-500 font-bold text-base">
-                    {product.price} ETB
                   </span>
                 </div>
               ) : (

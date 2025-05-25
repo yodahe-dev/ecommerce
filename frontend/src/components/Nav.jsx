@@ -60,9 +60,10 @@ export default function Nav({
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
             <NavLink to="/" label="Home" />
-            <NavLink to="/search" label="Search" />
             <NavLink to="/products" label="products" />
             <NavLink to="/about" label="About" />
+            <NavLink to="/contact" label="contact us" />
+            
 
             {/* Cart */}
             {/* <Link to="/cart" className="relative group">

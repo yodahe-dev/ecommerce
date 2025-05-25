@@ -2,26 +2,37 @@ import React, { useState, useEffect } from "react";
 
 const API = "http://localhost:5000/api";
 
+// Convert decimal degrees to DMS string
+function decimalToDMS(deg, type) {
+  const absolute = Math.abs(deg);
+  const degrees = Math.floor(absolute);
+  const minutesNotTruncated = (absolute - degrees) * 60;
+  const minutes = Math.floor(minutesNotTruncated);
+  const seconds = ((minutesNotTruncated - minutes) * 60).toFixed(3);
+
+  let direction = "";
+  if (type === "lat") direction = deg >= 0 ? "N" : "S";
+  else if (type === "lng") direction = deg >= 0 ? "E" : "W";
+
+  return `${direction} ${degrees}° ${minutes}' ${seconds}''`;
+}
+
+// Simple phone validator for Ethiopia: starts with 9 and 9 digits total
+const isValidPhone = (phone) => /^9\d{8}$/.test(phone);
+
 const Checkout = () => {
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [receiverPhone, setReceiverPhone] = useState("");
   const [address, setAddress] = useState("");
   const [coords, setCoords] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [deliveryAllowed, setDeliveryAllowed] = useState(false);
   const [message, setMessage] = useState("");
-
   const [notes, setNotes] = useState([]);
   const [inputNote, setInputNote] = useState("");
-
-  // Product info
   const [productId, setProductId] = useState(null);
-  const [productName, setProductName] = useState("");
-  const [productPrice, setProductPrice] = useState(0);
-  const [loadingProduct, setLoadingProduct] = useState(false);
-  const [productError, setProductError] = useState("");
+  const [product, setProduct] = useState(null);
 
-  // Get userId from localStorage
   const userId = localStorage.getItem("user_id") || "";
 
   useEffect(() => {
@@ -30,38 +41,12 @@ const Checkout = () => {
     if (match && match[1]) {
       const id = match[1];
       setProductId(id);
-
-      setLoadingProduct(true);
       fetch(`${API}/products/${id}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch product");
-          return res.json();
-        })
-        .then((data) => {
-          setProductName(data.name || "Unknown Product");
-          setProductPrice(data.price || 0);
-          setLoadingProduct(false);
-        })
-        .catch(() => {
-          setProductName("Unknown Product");
-          setProductPrice(0);
-          setProductError("Failed to load product data");
-          setLoadingProduct(false);
-        });
+        .then((res) => res.json())
+        .then(setProduct)
+        .catch(() => setProduct(null));
     }
   }, []);
-
-  const addNote = () => {
-    const trimmed = inputNote.trim();
-    if (trimmed && !notes.includes(trimmed)) {
-      setNotes([...notes, trimmed]);
-      setInputNote("");
-    }
-  };
-
-  const removeNote = (noteToRemove) => {
-    setNotes(notes.filter((n) => n !== noteToRemove));
-  };
 
   const getAddressFromCoords = async (lat, lng) => {
     try {
@@ -77,7 +62,7 @@ const Checkout = () => {
 
   const shareLocation = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      alert("Geolocation not supported by your browser");
       return;
     }
     setLoadingLocation(true);
@@ -88,12 +73,11 @@ const Checkout = () => {
           lng: position.coords.longitude,
         };
         setCoords(newCoords);
-
         const addr = await getAddressFromCoords(newCoords.lat, newCoords.lng);
 
         if (!addr.toLowerCase().includes("addis ababa")) {
           setDeliveryAllowed(false);
-          setMessage("Delivery is coming soon in your area.");
+          setMessage("Delivery is available only in Addis Ababa for now.");
         } else {
           setDeliveryAllowed(true);
           setMessage("");
@@ -103,25 +87,36 @@ const Checkout = () => {
         setLoadingLocation(false);
       },
       () => {
-        alert("Failed to get location");
+        alert("Failed to get your location");
         setLoadingLocation(false);
       }
     );
   };
 
+  const addNote = () => {
+    const trimmed = inputNote.trim();
+    if (trimmed && !notes.includes(trimmed)) {
+      setNotes([...notes, trimmed]);
+      setInputNote("");
+    }
+  };
+
+  const removeNote = (noteToRemove) => {
+    setNotes(notes.filter((n) => n !== noteToRemove));
+  };
+
   const makePayment = async () => {
-    if (!productId) return alert("Product not selected");
-    if (!userId) return alert("User not logged in");
+    if (!productId || !userId) return;
 
     const payload = {
       userId,
       productId,
-      productName,
-      amount: productPrice,
+      productName: product?.name,
+      amount: product?.price,
       phone,
-      email,
       address,
       notes,
+      additionalphone: receiverPhone,
     };
 
     try {
@@ -130,143 +125,175 @@ const Checkout = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const data = await res.json();
-
       if (res.ok && data.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        alert("Payment initiation failed: " + (data.message || "Unknown error"));
+        alert("Payment failed: " + (data.message || "Unknown error"));
       }
-    } catch (error) {
-      alert("Error starting payment");
-      console.error(error);
+    } catch (err) {
+      alert("Payment error");
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!phone) {
-      alert("Phone number is required");
+    if (
+      !isValidPhone(phone) ||
+      !isValidPhone(receiverPhone) ||
+      !deliveryAllowed ||
+      !address
+    )
       return;
-    }
-    if (!deliveryAllowed) {
-      alert("Delivery not available in your area");
-      return;
-    }
     makePayment();
   };
 
+  const isFormValid =
+    isValidPhone(phone) && isValidPhone(receiverPhone) && deliveryAllowed && address;
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="max-w-md w-full rounded-lg shadow-md p-6 bg-gray-300 dark:bg-gray-800">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Checkout</h2>
-        </div>
+    <div className="min-h-screen px-4 py-8 bg-gray-100 dark:bg-gray-900 flex justify-center items-start">
+      <div className="w-full max-w-xl bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">
+          Complete Your Order
+        </h2>
 
-        {loadingProduct && <p>Loading product...</p>}
-        {productError && <p className="text-red-600">{productError}</p>}
-
-        {!loadingProduct && !productError && productName && (
-          <div className="mb-4 text-center">
-            <h3 className="text-xl font-semibold">{productName}</h3>
-            <p className="text-lg">Price: {productPrice} ETB</p>
+        {product && (
+          <div className="mb-6 text-center">
+            <img
+              src={product.imageUrl || "https://via.placeholder.com/300"}
+              alt={product.name}
+              className="mx-auto rounded shadow h-48 object-cover"
+            />
+            <h3 className="text-xl font-semibold mt-3 text-gray-900 dark:text-gray-100">
+              {product.name}
+            </h3>
+            <p className="text-lg text-green-700 dark:text-green-400">
+              Price: {product.price} ETB
+            </p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block mb-1 font-medium" htmlFor="phone">
-              Phone number <span className="text-red-500">*</span>
+            <label className="block mb-1 font-medium text-gray-800 dark:text-gray-200">
+              Your Telbirr Number
             </label>
             <input
-              id="phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+251 9xx xxx xxx"
+              placeholder="9XXXXXXXX"
               required
-              className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className={`w-full p-2 bg-transparent rounded border ${
+                isValidPhone(phone)
+                  ? "border-green-500"
+                  : "border-red-500"
+              } focus:outline-none`}
             />
+            {!isValidPhone(phone) && phone.length > 0 && (
+              <p className="text-red-600 text-sm mt-1">
+                Enter valid Ethiopian phone starting with 9, 9 digits total
+              </p>
+            )}
           </div>
 
           <div>
-            <label className="block mb-1 font-medium" htmlFor="email">
-              Email Receiver (optional)
+            <label className="block mb-1 font-medium text-gray-800 dark:text-gray-200">
+              Receiver's Phone Number
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              type="tel"
+              value={receiverPhone}
+              onChange={(e) => setReceiverPhone(e.target.value)}
+              placeholder="9XXXXXXXX"
+              required
+              className={`bg-transparent w-full p-2 rounded border ${
+                isValidPhone(receiverPhone)
+                  ? "border-green-500"
+                  : "border-red-500"
+              } focus:outline-none`}
             />
+            {!isValidPhone(receiverPhone) && receiverPhone.length > 0 && (
+              <p className="text-red-600 text-sm mt-1">
+                Enter valid Ethiopian phone starting with 9, 9 digits total
+              </p>
+            )}
           </div>
 
           <div>
-            <label className="block mb-1 font-medium">Order Notes (optional)</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {notes.map((note) => (
-                <span
-                  key={note}
-                  className="bg-gray-200 dark:bg-gray-600 text-sm px-2 py-1 rounded-full flex items-center"
-                >
-                  {note}
-                  <button
-                    type="button"
-                    onClick={() => removeNote(note)}
-                    className="ml-2 text-red-500 hover:text-red-700"
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-            </div>
+            <label className="block mb-1 font-medium text-gray-800 dark:text-gray-200">
+              Order Notes (optional)
+            </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={inputNote}
                 onChange={(e) => setInputNote(e.target.value)}
-                placeholder="e.g. black, size XL, no onions"
-                className="flex-1 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Add a note"
+                className="bg-transparent flex-1 p-2 rounded border focus:outline-none"
               />
               <button
                 type="button"
                 onClick={addNote}
-                className="px-4 py-2 bg-gray-600 text-white rounded"
+                disabled={!inputNote.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-blue-300"
               >
                 Add
               </button>
             </div>
+            {notes.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {notes.map((n) => (
+                  <div
+                    key={n}
+                    className="bg-gray-200 dark:bg-gray-700 rounded-full px-3 py-1 flex items-center gap-2"
+                  >
+                    <span>{n}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeNote(n)}
+                      className="text-red-600 dark:text-red-400 font-bold"
+                      aria-label={`Remove note ${n}`}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
             type="button"
             onClick={shareLocation}
             disabled={loadingLocation}
-            className="w-full py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:bg-blue-400"
+            className="w-full py-2 rounded bg-indigo-600 text-white font-semibold disabled:bg-indigo-400"
           >
-            {loadingLocation ? "Getting Location..." : "Use My Current Location"}
+            {loadingLocation ? "Locating..." : "Use My Current Location"}
           </button>
 
           {coords && (
-            <div className="text-sm mt-2">
-              <strong>Coordinates:</strong> {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded border text-gray-700 dark:text-gray-200">
+              <p>
+                Latitude: {coords.lat.toFixed(6)} / {decimalToDMS(coords.lat, "lat")}
+              </p>
+              <p>
+                Longitude: {coords.lng.toFixed(6)} / {decimalToDMS(coords.lng, "lng")}
+              </p>
+              <p className="mt-1 italic text-sm">{address}</p>
             </div>
           )}
 
           {message && (
-            <div className="mt-3 text-center text-red-500 font-medium">{message}</div>
+            <div className="text-red-600 font-semibold text-center mt-2">{message}</div>
           )}
 
           <button
             type="submit"
-            disabled={!deliveryAllowed}
-            className={`w-full py-2 rounded font-semibold ${
-              deliveryAllowed
-                ? "bg-green-600 hover:bg-green-700 text-white"
-                : "bg-gray-400 cursor-not-allowed text-gray-700"
+            disabled={!isFormValid}
+            className={`w-full py-3 rounded font-semibold mt-4 ${
+              isFormValid ? "bg-green-600 text-white" : "bg-gray-400 text-gray-700 cursor-not-allowed"
             }`}
           >
             Pay Now
@@ -274,8 +301,8 @@ const Checkout = () => {
         </form>
 
         {!deliveryAllowed && address && (
-          <p className="mt-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-            Delivery available only in Addis Ababa <br /> (coming soon in all Ethiopian regions).
+          <p className="text-center text-gray-500 mt-6 text-sm dark:text-gray-400">
+            Delivery available only in Addis Ababa.<br />More cities coming soon.
           </p>
         )}
       </div>

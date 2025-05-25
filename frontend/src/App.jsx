@@ -111,7 +111,7 @@ function App() {
   }
 
   return (
-    <div className={darkMode ? "dark" : ""}>
+    <div className={`flex flex-col h-screen ${darkMode ? "dark" : ""}`}>
       <Nav
         isAuthenticated={!!token}
         userEmail={user?.email || ""}
@@ -122,7 +122,6 @@ function App() {
 
       <main className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
         <Routes>
-          {/* Public routes */}
           <Route
             path="/signup"
             element={
@@ -139,8 +138,6 @@ function App() {
               </PublicOnlyRoute>
             }
           />
-
-          {/* Seller only routes */}
           <Route
             path="/upload"
             element={
@@ -165,15 +162,11 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Public pages */}
           <Route path="/" element={<Home />} />
-          <Route path="/contact" element={<Contact/>} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/products" element={<Catagory />} />
           <Route path="/about" element={<About />} />
           <Route path="/product/:id" element={<ProductDetail />} />
-
-          {/* Checkout for any logged-in user */}
           <Route
             path="/checkout/:id"
             element={
@@ -185,8 +178,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Auth-only user profile */}
           <Route
             path="/account"
             element={
@@ -202,11 +193,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Admin-only route example */}
-          {/* You can add other admin or manager routes with requiredRoles */}
-
-          {/* Fallback 404 */}
           <Route
             path="*"
             element={

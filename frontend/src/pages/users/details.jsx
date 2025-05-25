@@ -1,19 +1,21 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { motion, AnimatePresence, LayoutGroup, useDragControls } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  LayoutGroup,
+  useDragControls,
+} from "framer-motion";
 import { useHotkeys } from "react-hotkeys-hook";
 import ReactImageMagnify from "react-image-magnify";
-import { 
-  FiChevronLeft, 
-  FiChevronRight, 
-  FiHeart, 
-  FiShare2, 
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiHeart,
+  FiShare2,
   FiTruck,
-  FiShield,
-  FiPlus,
-  FiMinus,
-  FiAlertCircle
+  FiAlertCircle,
 } from "react-icons/fi";
 import { TbArrowsExchange } from "react-icons/tb";
 import { toast } from "react-toastify";
@@ -31,7 +33,7 @@ const PriceDisplay = React.memo(({ price, lastPrice }) => {
 
   useEffect(() => {
     if (price !== lastPrice) setFlip((f) => !f);
-  }, [price]);
+  }, [price, lastPrice]);
 
   const discount = lastPrice
     ? Math.round(((lastPrice - price) / lastPrice) * 100)
@@ -87,7 +89,10 @@ const LoadingSkeleton = () => (
         <div className="h-8 bg-gray-100 rounded-full w-1/2 animate-pulse" />
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-4 bg-gray-100 rounded-full animate-pulse" />
+            <div
+              key={i}
+              className="h-4 bg-gray-100 rounded-full animate-pulse"
+            />
           ))}
         </div>
       </div>
@@ -121,7 +126,6 @@ export default function ProductDetail() {
   const [product, setProduct] = useState(null);
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const dragControls = useDragControls();
   const [activeTab, setActiveTab] = useState("details");
@@ -132,15 +136,32 @@ export default function ProductDetail() {
     try {
       const { data } = await axios.get(`${API}/products/${id}`);
       setProduct(data);
+      setError("");
     } catch (err) {
       setError("Failed to load product details. Please try again later.");
       toast.error("Failed to load product details");
     }
   }, [id]);
 
+  // Check if product is liked by user on load
+  const checkIfLiked = useCallback(async () => {
+    try {
+      const userId = localStorage.getItem("user_id");
+      if (!userId) return;
+      const { data } = await axios.post(`${API}/isLiked`, {
+        userId,
+        productId: id,
+      });
+      setIsWishlisted(data.liked);
+    } catch {
+      // ignore error here
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchProduct();
-  }, [fetchProduct]);
+    checkIfLiked();
+  }, [fetchProduct, checkIfLiked]);
 
   const parsedExtraImages = useMemo(() => {
     if (!product) return [];
@@ -191,9 +212,33 @@ export default function ProductDetail() {
     navigate(`/checkout/${id}`);
   };
 
-  const toggleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
-    toast.success(!isWishlisted ? "Added to wishlist" : "Removed from wishlist");
+  const toggleWishlists = async () => {
+    try {
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        toast.error("Please login first");
+        return;
+      }
+      const url = isWishlisted ? `${API}/unlike` : `${API}/like`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, productId: id }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        toast.error(err.message || "Something went wrong");
+      } else {
+        setIsWishlisted(!isWishlisted);
+        toast.success(
+          isWishlisted ? "Removed from wishlist" : "Added to wishlist"
+        );
+      }
+    } catch (error) {
+      toast.error("Server error");
+    }
   };
 
   const shareProduct = () => {
@@ -242,238 +287,130 @@ export default function ProductDetail() {
                         },
                         largeImage: {
                           src: images[selectedImage],
-                          width: 2000,
-                          height: 2000,
+                          width: 1200,
+                          height: 1800,
                         },
-                        enlargedImageContainerStyle: { zIndex: 50 },
-                        lensStyle: {
-                          backgroundColor: "rgba(255,255,255,0.2)",
-                          cursor: "zoom-in",
-                        },
-                        imageStyle: { transition: "transform 0.3s ease-out" },
+                        lensStyle: { backgroundColor: "rgba(0,0,0,.3)" },
+                        enlargedImageContainerStyle: { zIndex: 9999 },
+                        shouldUsePositiveSpaceLens: true,
+                        enlargedImagePosition: "over",
                       }}
                     />
                   </motion.div>
                 </AnimatePresence>
               </motion.div>
 
-              {images.length > 1 && (
-                <>
-                  <button
-                    onClick={() => handleImageNavigation("prev")}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 text-white p-2 rounded-full hover:bg-black transition-all"
-                  >
-                    <FiChevronLeft size={20} />
-                  </button>
-                  <button
-                    onClick={() => handleImageNavigation("next")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 text-white p-2 rounded-full hover:bg-black transition-all"
-                  >
-                    <FiChevronRight size={20} />
-                  </button>
-                </>
-              )}
+              <button
+                className="absolute top-1/2 left-4 bg-white/80 rounded-full p-1 shadow-lg hover:bg-white dark:bg-black/60 dark:hover:bg-black"
+                aria-label="Previous Image"
+                onClick={() => handleImageNavigation("prev")}
+              >
+                <FiChevronLeft size={24} />
+              </button>
+              <button
+                className="absolute top-1/2 right-4 bg-white/80 rounded-full p-1 shadow-lg hover:bg-white dark:bg-black/60 dark:hover:bg-black"
+                aria-label="Next Image"
+                onClick={() => handleImageNavigation("next")}
+              >
+                <FiChevronRight size={24} />
+              </button>
 
-              <div className="absolute top-4 right-4 flex gap-2">
-                <button
-                  onClick={toggleWishlist}
-                  className="p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
-                >
-                  <FiHeart
-                    size={20}
-                    className={isWishlisted ? "text-red-500 fill-current" : "text-gray-800"}
-                  />
-                </button>
-                <button
-                  onClick={shareProduct}
-                  className="p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors"
-                >
-                  <FiShare2 size={20} className="text-gray-800" />
-                </button>
-              </div>
-            </div>
-
-            {images.length > 1 && (
-              <div className="grid grid-cols-4 gap-4">
-                {images.map((src, idx) => (
-                  <motion.button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    whileHover={{ scale: 1.05 }}
-                    className={`aspect-square rounded-xl overflow-hidden border-2 ${
-                      idx === selectedImage
-                        ? "border-orange-500"
-                        : "border-transparent"
+              <div className="flex justify-center gap-3 mt-4 overflow-x-auto px-4">
+                {images.map((img, i) => (
+                  <motion.img
+                    key={img}
+                    src={img}
+                    alt={`Thumbnail ${i + 1}`}
+                    className={`w-16 h-16 rounded-xl object-cover cursor-pointer ${
+                      selectedImage === i ? "ring-4 ring-orange-400" : ""
                     }`}
-                  >
-                    <img
-                      src={src}
-                      alt={`Thumbnail ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </motion.button>
+                    onClick={() => setSelectedImage(i)}
+                    whileHover={{ scale: 1.05 }}
+                    layoutId={`thumbnail-${i}`}
+                  />
                 ))}
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Product Info Section */}
-          <div className="space-y-6 sticky top-8">
-            <div className="flex items-start justify-between">
-              <h1 className="text-4xl font-bold text-gray-800 dark:text-white">{product.name}</h1>
-            </div>
+          {/* Details Section */}
+          <div className="space-y-6">
+            <h1 className="text-3xl font-semibold">{product.name}</h1>
 
             <PriceDisplay price={product.price} lastPrice={product.lastPrice} />
 
-            {product.condition && (
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-gray-500">Condition</span>
-                <span className="font-medium capitalize">{product.condition}</span>
-               
-              </div>
-            )}
-            {/* on next version will be available this is mvp so no need on the vesion*/}
-            {/* <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full dark:bg-gray-800">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-1 hover:bg-gray-200 rounded-full dark:hover:bg-gray-900"
-                >
-                  <FiMinus size={18} />
-                </button>
-                <span className="w-8 text-center font-medium">{quantity}</span>
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="p-1 hover:bg-gray-200 rounded-full dark:hover:bg-gray-900"
-                >
-                  <FiPlus size={18} />
-                </button>
-              </div>
-              <span className="text-sm text-gray-500 dark:text-white">
-                {product.stock} items available
-              </span>
-            </div> */}
-
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
               <button
-                onClick={handleBuyNow}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl text-lg font-medium transition-transform hover:scale-[1.02] active:scale-95"
+                aria-label="Toggle Wishlist"
+                onClick={toggleWishlists}
+                className="rounded-lg border border-orange-400 p-3 flex items-center gap-2 text-orange-500 hover:bg-orange-100 transition"
               >
-                Buy Now
+                <FiHeart
+                  size={20}
+                  className={isWishlisted ? "fill-orange-500 text-orange-600" : ""}
+                />
+                {isWishlisted ? "Wishlisted" : "Add to Wishlist"}
+              </button>
+              <button
+                aria-label="Share Product"
+                onClick={shareProduct}
+                className="rounded-lg border border-gray-300 p-3 flex items-center gap-2 hover:bg-gray-100 transition"
+              >
+                <FiShare2 size={20} />
+                Share
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-3 dark:bg-gray-800">
-                <FiTruck className="text-orange-500 text-2xl" />
-                <div>
-                  <p className="font-medium">Free Shipping</p>
-                  <p className="text-sm text-gray-500">Delivery in 3-5 days</p>
-                </div>
+            <div className="flex flex-wrap gap-4 items-center text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <FiTruck />
+                <span>Free Delivery</span>
               </div>
-              <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-3 dark:bg-gray-800">
-                <TbArrowsExchange className="text-orange-500 text-2xl" />
-                <div>
-                  <p className="font-medium">Easy Returns</p>
-                  <p className="text-sm text-gray-500">-day return policy</p>
-                </div>
+              <div className="flex items-center gap-2">
+                <TbArrowsExchange />
+                <span>30 Days Return</span>
               </div>
             </div>
 
-            <div className="border-b border-gray-200">
-              <div className="flex gap-6">
-                {["details", "specs", "reviews"].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-2 px-1 capitalize ${
-                      activeTab === tab
-                        ? "border-b-2 border-orange-500 font-medium"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {activeTab === "details" && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="prose text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: product.description }}
-                />
-              )}
-
-            {activeTab === "specs" && (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    className="space-y-4"
-  >
-    {Array.isArray(product.specs) && product.specs.length > 0 ? (
-      <div>
-        <h3 className="text-lg font-semibold mb-3">Available Options</h3>
-        <ul className="flex flex-wrap gap-3">
-          {product.specs.map((item, idx) => (
-            <li
-              key={idx}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 cursor-pointer hover:bg-orange-500 hover:text-white transition"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-    ) : (
-      <p className="text-gray-500 italic">No specifications available.</p>
-    )}
-  </motion.div>
-)}
-
-
-              {activeTab === "reviews" && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="space-y-4"
+            <div>
+              <div className="flex gap-6 border-b border-gray-300">
+                <button
+                  onClick={() => setActiveTab("details")}
+                  className={`pb-2 ${
+                    activeTab === "details"
+                      ? "border-b-2 border-orange-500 font-semibold text-orange-500"
+                      : "text-gray-500"
+                  }`}
                 >
-                  {product.reviews?.map((review) => (
-                    <div key={review.id} className="border-b pb-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                          <span className="font-medium text-orange-500">
-                            {review.author[0]}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{review.author}</p>
-                          <div className="flex items-center gap-1 text-sm text-gray-500">
-                            {[...Array(5)].map((_, i) => (
-                              <span
-                                key={i}
-                                className={`${
-                                  i < review.rating
-                                    ? "text-orange-500"
-                                    : "text-gray-300"
-                                }`}
-                              >
-                                ★
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-gray-700">{review.comment}</p>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
+                  Details
+                </button>
+                <button
+                  onClick={() => setActiveTab("reviews")}
+                  className={`pb-2 ${
+                    activeTab === "reviews"
+                      ? "border-b-2 border-orange-500 font-semibold text-orange-500"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Reviews
+                </button>
+              </div>
+              <div className="pt-4 text-gray-700 max-h-64 overflow-y-auto">
+                {activeTab === "details" && (
+                  <p>{product.description || "No details available."}</p>
+                )}
+                {activeTab === "reviews" && (
+                  <p>No reviews yet.</p>
+                )}
+              </div>
             </div>
+
+            <button
+              onClick={handleBuyNow}
+              className="mt-6 w-full bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
+            >
+              Buy Now
+            </button>
           </div>
         </div>
       </LayoutGroup>

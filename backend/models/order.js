@@ -5,7 +5,6 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -14,7 +13,6 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
-
     paymentId: {
       type: DataTypes.UUID,
       allowNull: true,
@@ -23,22 +21,29 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
-
     productId: {
       type: DataTypes.UUID,
-      allowNull: false, // required
+      allowNull: false,
       references: {
-        model: 'Products', // fixed table name
+        model: 'Products',
         key: 'id',
       },
     },
-
     orderStatus: {
-      type: DataTypes.STRING,
-      allowNull: false,
+      type: DataTypes.ENUM('expired', 'pending', 'paid'),
       defaultValue: 'pending',
+      allowNull: false,
     },
-
+    receiveStatus: {
+      type: DataTypes.ENUM('not_received', 'received', 'refunded', 'refunding'),
+      defaultValue: 'not_received',
+      allowNull: false,
+    },
+    quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -48,46 +53,32 @@ module.exports = (sequelize, DataTypes) => {
       },
       set(value) {
         this.setDataValue('notes', JSON.stringify(value));
-      }
+      },
     },
-
     address: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-
     phone: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        is: /^9\d{8}$/, // must start with 9 and be 9 digits (Ethiopia)
+        is: /^9\d{8}$/,
       },
     },
-
-    addtionalphone: {
+    additionalphone: {  // fixed spelling here
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        is: /^9\d{8}$/, // must start with 9 and be 9 digits (Ethiopia)
+        is: /^9\d{8}$/,
       },
     },
   });
-  
+
   Order.associate = (models) => {
-    Order.belongsTo(models.User, {
-      foreignKey: 'userId',
-      as: 'user',
-    });
-
-    Order.belongsTo(models.Payment, {
-      foreignKey: 'paymentId',
-      as: 'payment',
-    });
-
-    Order.belongsTo(models.Product, {
-      foreignKey: 'productId',
-      as: 'product',
-    });
+    Order.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+    Order.belongsTo(models.Payment, { foreignKey: 'paymentId', as: 'payment' });
+    Order.belongsTo(models.Product, { foreignKey: 'productId', as: 'product' });
   };
 
   return Order;

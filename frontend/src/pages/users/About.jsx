@@ -1,125 +1,58 @@
-import { useEffect } from 'react';
+import React from 'react';
 
 export default function About() {
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
   return (
-    <>
-      <div className="max-w-full mx-auto p-8 bg-white dark:bg-gray-900 rounded-lg shadow-2xl my-12">
-        <h1 className="text-5xl font-extrabold mb-10 text-center bg-gradient-to-r from-orange-500 to-orange-700 bg-clip-text text-transparent">
-          Ethiopia's Trusted E-Commerce
-        </h1>
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 px-6 py-12">
+      <div className="max-w-4xl mx-auto space-y-10">
+        <h1 className="text-4xl font-bold text-orange-600">About AfroHive</h1>
 
-        <section className="mb-12 opacity-0 animate-fadeIn delay-100">
-          <p className="text-xl text-gray-900 dark:text-gray-100 leading-relaxed tracking-wide">
-            Welcome to your reliable online marketplace. We connect buyers and sellers across Ethiopia with a focus on <span className="font-semibold text-orange-600">trust</span>, <span className="font-semibold text-orange-600">quality</span>, and <span className="font-semibold text-orange-600">service</span>.
-          </p>
-        </section>
+        <p className="text-lg">
+          AfroHive is a modern e-commerce platform made for people who want a smooth shopping experience. We connect buyers and sellers across Africa and beyond.
+        </p>
 
-        <section className="mb-12 p-8 rounded-xl border-4 border-orange-400 dark:border-orange-600 bg-orange-50 dark:bg-orange-900 shadow-lg opacity-0 animate-fadeIn delay-200">
-          <h2 className="text-3xl font-bold mb-6 text-orange-700 dark:text-orange-300 tracking-wide">
-            Our Guarantee
-          </h2>
-          <p className="text-gray-800 dark:text-orange-200 leading-relaxed text-lg">
-            We stand behind every purchase you make. If your product does not arrive within a few weeks, you will get <span className="font-bold underline decoration-orange-600">100% of your money back</span> — no questions asked. Our commitment is to your satisfaction and peace of mind.
-          </p>
-        </section>
-
-        <section className="mb-12 opacity-0 animate-fadeIn delay-300">
-          <h2 className="text-3xl font-bold mb-6 text-orange-600 dark:text-orange-400 tracking-wide">
-            Become a Verified Seller
-          </h2>
-          <p className="text-gray-900 dark:text-gray-100 text-lg mb-4 leading-relaxed">
-            Interested in selling your products on our platform? To become a verified seller, please contact our team. Verification helps ensure the quality and authenticity of sellers, benefiting all users.
-          </p>
-          <p className="text-gray-900 dark:text-gray-100 text-lg leading-relaxed">
-            Verified sellers get priority listing, seller support, and access to exclusive tools to grow their business.
-          </p>
-        </section>
-
-        <section className="mb-12 opacity-0 animate-fadeIn delay-400">
-          <h2 className="text-3xl font-bold mb-6 text-orange-600 dark:text-orange-400 tracking-wide">
-            Contact Us
-          </h2>
-          <p className="text-gray-900 dark:text-gray-100 text-lg mb-4 leading-relaxed">
-            For seller verification, questions, or any other information, feel free to reach out to us:
-          </p>
-          <ul className="list-disc list-inside text-gray-900 dark:text-gray-100 text-lg space-y-2">
-            <li>
-              Email:{' '}
-              <a
-                href="mailto:support@ethiotrust.com"
-                className="text-orange-600 dark:text-orange-400 hover:underline transition-colors"
-              >
-                support@ethiotrust.com
-              </a>
-            </li>
-            <li>
-              Phone:{' '}
-              <a
-                href="tel:+251985543325"
-                className="text-orange-600 dark:text-orange-400 hover:underline transition-colors font-semibold"
-              >
-                +251 98 554 3325
-              </a>
-            </li>
-            <li>Address: 123 Addis Ababa St, Addis Ababa, Ethiopia</li>
+        <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-xl shadow">
+          <h2 className="text-2xl font-semibold mb-3">Why AfroHive?</h2>
+          <ul className="list-disc list-inside space-y-2 text-base">
+            <li>Fast product search with real-time results</li>
+            <li>Simple and clean interface</li>
+            <li>Safe checkout and user-friendly design</li>
+            <li>Track your orders and manage your likes or cart easily</li>
+            <li>Mobile-friendly for easy access anytime</li>
           </ul>
-        </section>
+        </div>
 
-        <section className="opacity-0 animate-fadeIn delay-500">
-          <h2 className="text-3xl font-bold mb-6 text-orange-600 dark:text-orange-400 tracking-wide">
-            Why Shop With Us?
-          </h2>
-          <ul className="list-disc list-inside text-gray-900 dark:text-gray-100 text-lg space-y-3">
-            <li>
-              <strong>Wide Selection:</strong> Find products from trusted local sellers across Ethiopia.
-            </li>
-            <li>
-              <strong>Secure Payments:</strong> Our platform ensures safe and reliable transactions.
-            </li>
-            <li>
-              <strong>Fast Delivery:</strong> We work with trusted couriers to deliver your order quickly.
-            </li>
-            <li>
-              <strong>Customer Support:</strong> Dedicated support ready to help you with any issue.
-            </li>
-            <li>
-              <strong>Verified Sellers:</strong> Only quality-checked sellers join our marketplace.
-            </li>
+        <div className="bg-orange-100 dark:bg-orange-900 p-6 rounded-xl shadow">
+          <h2 className="text-2xl font-semibold mb-3 text-orange-700 dark:text-orange-200">Buyer Protection</h2>
+          <p className="text-base">
+            Didn't get your product? No worries. We refund 100% of your money if your item doesn't arrive.
+          </p>
+        </div>
+
+        <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-xl shadow">
+          <h2 className="text-2xl font-semibold mb-3">Become a Seller</h2>
+          <p className="text-base">
+            Want to sell on AfroHive? Go to our <a href="/contact" className="text-orange-500 underline">Contact Us</a> page and apply. We’ll review your request and approve your seller role.
+          </p>
+        </div>
+
+        <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-xl shadow">
+          <h2 className="text-2xl font-semibold mb-3">More Features</h2>
+          <ul className="list-disc list-inside space-y-2 text-base">
+            <li>Daily deals and product discounts</li>
+            <li>Product likes to see what’s trending</li>
+            <li>Price history and comparison tools</li>
+            <li>Secure login with email and password</li>
+            <li>Dark mode for better browsing at night</li>
           </ul>
-        </section>
+        </div>
+
+        <div className="bg-orange-50 dark:bg-orange-950 p-6 rounded-xl shadow">
+          <h2 className="text-2xl font-semibold mb-3 text-orange-600">Need Help?</h2>
+          <p className="text-base">
+            Have questions or need help? Contact our support team anytime at <a href="mailto:support@afrohive.com" className="text-orange-500 underline">support@afrohive.com</a>
+          </p>
+        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.8s ease forwards;
-          transform: translateY(20px);
-        }
-        .delay-100 {
-          animation-delay: 0.1s;
-        }
-        .delay-200 {
-          animation-delay: 0.2s;
-        }
-        .delay-300 {
-          animation-delay: 0.3s;
-        }
-        .delay-400 {
-          animation-delay: 0.4s;
-        }
-        .delay-500 {
-          animation-delay: 0.5s;
-        }
-      `}</style>
-    </>
+    </div>
   );
 }

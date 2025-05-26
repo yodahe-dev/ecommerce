@@ -9,7 +9,7 @@ const cartRoutes = require("./routes/Cart");
 const paymentRoutes = require("./routes/payment");
 const  likeProduct = require('./routes/like');
 const ratingRoutes = require('./routes/rating'); // Import rating routes
-
+const orderRoutes = require('./routes/order'); // Import order routes
 
 const app = express();
 
@@ -24,8 +24,9 @@ app.use('/api', authRoutes);
 app.use('/api', productRoutes); 
 app.use("/api/cart", cartRoutes);
 app.use("/api", paymentRoutes);
-app.use("/api", likeProduct); 
-app.use('/api/ratings', ratingRoutes);
+app.use("/api", likeProduct);
+app.use("/api", ratingRoutes);
+app.use('/api', orderRoutes); 
 
 
 

@@ -1,74 +1,80 @@
 const express = require("express");
 const router = express.Router();
-const { Rating, User, Product } = require("../models"); // Adjust path if needed
-const multer = require("multer");
 const path = require("path");
-const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
+const multer = require("multer");
+const { Rating } = require("../models");
 
-// Setup multer for image upload
+// Set allowed image types and max size
+const allowedExt = [".png", ".jpg", ".jpeg", ".gif"];
+const maxFileSize = 2 * 1024 * 1024; // 2MB
+
+// Configure Multer storage
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/reviews/");
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../../frontend/src/assets/rating"));
   },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    cb(null, uuidv4() + ext);
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const name = crypto.randomBytes(16).toString("hex") + ext;
+    cb(null, name);
   },
 });
 
-const upload = multer({ storage });
-
-// Middleware to check user auth (simple stub, replace with your auth)
-const authMiddleware = (req, res, next) => {
-  // Assume user is authenticated and user ID is in req.user.id
-  // Replace with your real auth logic
-  req.user = { id: "user-uuid-here" };
-  next();
+// File type filter
+const fileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowedExt.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files are allowed (.jpg, .png, .jpeg, .gif)"));
+  }
 };
 
-// Create new rating/review
-router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
-  try {
-    const { rating, feedback, productId } = req.body;
+// Multer upload config
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: maxFileSize },
+});
 
-    if (!productId || !rating) {
-      return res.status(400).json({ message: "Missing required fields" });
+// POST /api/rating
+router.post("/rating", upload.single("image"), async (req, res) => {
+  try {
+    const { userId, productId, rating, feedback } = req.body;
+
+    if (!userId || !productId || !rating) {
+      return res.status(400).json({ message: "userId, productId, and rating are required" });
     }
 
-    // Validate rating
-    const ratingNum = parseInt(rating, 10);
-    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-      return res.status(400).json({ message: "Invalid rating value" });
+    const ratingValue = parseInt(rating, 10);
+    if (isNaN(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    // Set image path if file is uploaded
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = `/src/assets/rating/${req.file.filename}`;
     }
 
     const newRating = await Rating.create({
-      userId: req.user.id,
+      userId,
       productId,
-      rating: ratingNum,
-      feedback,
-      imageUrl: req.file ? `/uploads/reviews/${req.file.filename}` : null,
+      rating: ratingValue,
+      feedback: feedback || null,
+      imageUrl,
     });
 
-    res.status(201).json(newRating);
+    return res.status(201).json(newRating);
   } catch (error) {
-    console.error("Error creating rating:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+    console.error("Rating upload failed:", error);
 
-// Optionally add GET to fetch ratings by product
-router.get("/product/:productId", async (req, res) => {
-  try {
-    const ratings = await Rating.findAll({
-      where: { productId: req.params.productId },
-      include: [{ model: User, as: "user", attributes: ["id", "name"] }],
-      order: [["createdAt", "DESC"]],
-    });
+    if (error.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ message: "Image too large. Max size is 2MB." });
+    }
 
-    res.json(ratings);
-  } catch (error) {
-    console.error("Error fetching ratings:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 

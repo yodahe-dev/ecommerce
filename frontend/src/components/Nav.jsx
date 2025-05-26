@@ -53,69 +53,45 @@ export default function Nav({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-            Pickup
+          <Link
+            to="/"
+            className="text-2xl font-bold text-orange-600 dark:text-orange-400"
+          >
+            AfroHive
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
             <NavLink to="/" label="Home" />
-            <NavLink to="/products" label="products" />
+            <NavLink to="/products" label="Products" />
             <NavLink to="/about" label="About" />
-            <NavLink to="/contact" label="contact us" />
-            
-
-            {/* Cart */}
-            {/* <Link to="/cart" className="relative group">
-              <FaShoppingCart className="text-lg text-gray-700 dark:text-white group-hover:text-orange-500 transition" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-1.5 rounded-full font-bold">
-                  {cartCount}
-                </span>
-              )}
-            </Link> */}
-
-            {/* Theme Toggle */}
+            <NavLink to="/contact" label="Contact Us" />
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
-              title="Toggle theme"
+              className="text-gray-600 dark:text-white hover:text-orange-500 dark:hover:text-orange-400"
             >
               {darkMode ? <FaSun /> : <FaMoon />}
             </button>
           </div>
 
-          {/* Mobile Toggle */}
-          <div className="md:hidden flex items-center gap-3">
-            {/* Theme Toggle */}
+          {/* Mobile Menu Toggle */}
+          <div className="flex md:hidden items-center gap-3">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="text-gray-600 dark:text-gray-300"
+              className="text-gray-600 dark:text-white"
             >
               {darkMode ? <FaSun /> : <FaMoon />}
             </button>
-
-            {/* Cart */}
-            {/* <Link to="/cart" className="relative">
-              <FaShoppingCart className="text-lg text-gray-700 dark:text-white" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 text-xs bg-red-500 text-white px-1.5 rounded-full font-bold">
-                  {cartCount}
-                </span>
-              )}
-            </Link> */}
-
-            {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              className="text-gray-700 dark:text-white"
+              className="text-gray-700 dark:text-white text-xl"
             >
               {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
             </button>
           </div>
 
-          {/* Profile or Sign In (Always Visible) */}
-          <div className="ml-4 relative" ref={dropdownRef}>
+          {/* Profile or Sign In */}
+          <div className="ml-4 relative hidden md:block" ref={dropdownRef}>
             {isAuthenticated ? (
               <>
                 <button
@@ -159,7 +135,7 @@ export default function Nav({
             ) : (
               <Link
                 to="/login"
-                className="px-4 py-2 text-sm rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition"
+                className="hidden md:inline-block px-4 py-2 text-sm rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition"
               >
                 Sign In
               </Link>
@@ -178,9 +154,26 @@ export default function Nav({
             >
               <div className="flex flex-col gap-2 py-4">
                 <NavLink to="/" label="Home" />
-                <NavLink to="/search" label="Search" />
-                <NavLink to="/category" label="Category" />
+                <NavLink to="/products" label="Products" />
                 <NavLink to="/about" label="About" />
+                <NavLink to="/contact" label="Contact Us" />
+                <NavLink to="/account" label="Profile" />
+                {isAuthenticated ? (
+                  <button
+                    onClick={onLogout}
+                    className="text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900"
+                  >
+                    <FaSignOutAlt className="inline mr-2" />
+                    Log Out
+                  </button>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="px-4 py-2 text-sm text-indigo-600 hover:underline"
+                  >
+                    Sign In
+                  </Link>
+                )}
               </div>
             </motion.div>
           )}

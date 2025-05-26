@@ -3,6 +3,8 @@ const router = express.Router();
 const { Payment, Order, User } = require('../models');
 const fetch = require('node-fetch');
 
+const VALID_ORDER_STATUSES = ['pending', 'paid', 'expired'];
+
 router.post('/payment/initiate', async (req, res) => {
   try {
     const {
@@ -21,13 +23,11 @@ router.post('/payment/initiate', async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Check if user exists
     const user = await User.findByPk(userId);
     if (!user) {
       return res.status(400).json({ message: 'Invalid userId' });
     }
 
-    // Create payment
     const chapaTxRef = `tx-${Date.now()}`;
     const payment = await Payment.create({
       chapaTxRef,
@@ -36,19 +36,43 @@ router.post('/payment/initiate', async (req, res) => {
       status: 'initiated',
     });
 
-    // Create order with all required fields
-    const order = await Order.create({
-      userId,
-      productId,
-      paymentId: payment.id,
-      orderStatus: 'pending',
-      notes,
-      address,
-      phone,
-      addtionalphone: additionalphone, // typo in DB model: `addtionalphone`
+    const newStatus = 'pending';
+
+    // Check if pending order already exists for this user and product
+    let order = await Order.findOne({
+      where: {
+        userId,
+        productId,
+        orderStatus: newStatus,
+      },
     });
 
-    // Prepare payload for Chapa
+    if (order) {
+      // Update existing order
+      order.quantity += 1;
+      order.paymentId = payment.id;
+      order.notes = notes;
+      order.address = address;
+      order.phone = phone;
+      order.additionalphone = additionalphone;
+      order.orderStatus = newStatus; // ensure status is valid
+      await order.save();
+    } else {
+      // Create new order
+      order = await Order.create({
+        userId,
+        productId,
+        paymentId: payment.id,
+        orderStatus: newStatus, // only 'pending' here
+        receiveStatus: 'not_received',
+        quantity: 1,
+        notes,
+        address,
+        phone,
+        additionalphone,
+      });
+    }
+
     const payload = {
       public_key: process.env.CHAPA_PUBLIC_KEY,
       tx_ref: chapaTxRef,
@@ -66,7 +90,6 @@ router.post('/payment/initiate', async (req, res) => {
       },
     };
 
-    // Call Chapa API
     const chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
       method: 'POST',
       headers: {
@@ -79,10 +102,10 @@ router.post('/payment/initiate', async (req, res) => {
     const chapaData = await chapaRes.json();
 
     if (chapaData.status !== 'success') {
+      console.error('Chapa error:', chapaData);
       return res.status(500).json({ message: 'Failed to initialize payment', details: chapaData });
     }
 
-    // Update payment with full response
     await payment.update({ rawResponse: chapaData });
 
     return res.json({ checkout_url: chapaData.data.checkout_url });

@@ -8,8 +8,6 @@ import PublicOnlyRoute from "./components/PublicOnlyRoute";
 import Nav from "./components/Nav";
 import { FaSpinner } from "react-icons/fa";
 import { getProfile } from "./api";
-import CreateProduct from "./pages/seller/CreateProduct";
-import SellerProfile from "./pages/seller/SellerProfile";
 import Home from "./pages/users/Home";
 import Catagory from "./pages/users/Catagory";
 import About from "./pages/users/About";
@@ -138,30 +136,7 @@ function App() {
               </PublicOnlyRoute>
             }
           />
-          <Route
-            path="/upload"
-            element={
-              <ProtectedRoute
-                isAuthenticated={!!token}
-                userRole={user?.role?.name}
-                requiredRoles={["seller"]}
-              >
-                <CreateProduct />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/product"
-            element={
-              <ProtectedRoute
-                isAuthenticated={!!token}
-                userRole={user?.role?.name}
-                requiredRoles={["seller"]}
-              >
-                <SellerProfile />
-              </ProtectedRoute>
-            }
-          />
+          
           <Route path="/" element={<Home />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/products" element={<Catagory />} />

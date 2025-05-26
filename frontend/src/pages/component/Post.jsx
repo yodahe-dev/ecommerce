@@ -78,12 +78,7 @@ export default function SellerProfile() {
   if (!seller) return <p>Loading...</p>;
 
   return (
-    <div className="max-w-3xl mx-auto p-4 min-h-screen">
-      <h2 className="text-2xl font-bold mb-2">Seller Profile</h2>
-      <p><strong>Username:</strong> {seller.username}</p>
-      <p><strong>Email:</strong> {seller.email}</p>
-      <p><strong>Role:</strong> {seller.role}</p>
-      <p><strong>Total Products:</strong> {products.length}</p>
+    <div className=" min-h-screen">
 
       <hr className="my-4" />
 

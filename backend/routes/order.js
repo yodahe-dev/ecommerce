@@ -45,7 +45,7 @@ router.post('/orders/confirm/:orderId', auth, async (req, res) => {
     const order = await Order.findByPk(orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
-    order.orderStatus = 'expired';
+    order.orderStatus = 'paid';
     order.receiveStatus = 'received';
     await order.save();
 
@@ -57,30 +57,31 @@ router.post('/orders/confirm/:orderId', auth, async (req, res) => {
 });
 
 // POST /api/orders/refund/:orderId
-router.post('/orders/refund/:orderId', auth, async (req, res) => {
+
+router.post('/orders/confirm/:orderId', auth, async (req, res) => {
   try {
     const { orderId } = req.params;
     const order = await Order.findByPk(orderId);
-    if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    if (order.orderStatus !== 'paid' || order.receiveStatus !== 'not_received') {
-      return res.status(400).json({ message: 'Cannot refund this order' });
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
     }
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    if (order.createdAt > sevenDaysAgo) {
-      return res.status(400).json({ message: 'Refund only after 7 days' });
+    if (order.orderStatus !== 'paid') {
+      return res.status(400).json({ error: 'Order not paid yet' });
     }
 
-    order.receiveStatus = 'refunding';
+    order.receiveStatus = 'received';
     await order.save();
 
-    res.json({ message: 'Refund requested' });
+    res.json({ message: 'Order marked as received' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ error: 'Server error' });
   }
 });
+
+
+
 
 module.exports = router;

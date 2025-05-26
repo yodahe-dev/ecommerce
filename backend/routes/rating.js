@@ -5,7 +5,7 @@ const crypto = require("crypto");
 const multer = require("multer");
 const { Rating } = require("../models");
 
-// Set allowed image types and max size
+// Allowed image types and max size
 const allowedExt = [".png", ".jpg", ".jpeg", ".gif"];
 const maxFileSize = 2 * 1024 * 1024; // 2MB
 
@@ -52,17 +52,38 @@ router.post("/rating", upload.single("image"), async (req, res) => {
       return res.status(400).json({ message: "Rating must be between 1 and 5" });
     }
 
-    // Set image path if file is uploaded
     let imageUrl = null;
     if (req.file) {
       imageUrl = `/src/assets/rating/${req.file.filename}`;
     }
 
+    // Check if rating exists
+    const existing = await Rating.findOne({ where: { userId, productId } });
+
+    if (existing) {
+      const oldFeedback = existing.feedback ? existing.feedback.trim() : "";
+      const newFeedbackText = feedback ? feedback.trim() : "(updated the rating)";
+      const combinedFeedback = `[${newFeedbackText}]\n${oldFeedback ? `[${oldFeedback}]` : ""}`;
+
+      existing.rating = ratingValue;
+      existing.feedback = combinedFeedback;
+
+      if (imageUrl) {
+        existing.imageUrl = imageUrl;
+      }
+
+      await existing.save();
+
+      return res.status(200).json({ message: "Rating updated successfully" });
+    }
+
+    const initialFeedback = feedback ? `[${feedback.trim()}]` : null;
+
     const newRating = await Rating.create({
       userId,
       productId,
       rating: ratingValue,
-      feedback: feedback || null,
+      feedback: initialFeedback,
       imageUrl,
     });
 

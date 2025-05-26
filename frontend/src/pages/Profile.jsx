@@ -4,6 +4,7 @@ import { MdDarkMode, MdLightMode } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import Modal from "react-modal";
 import { getProfile } from "../api";
+import SellerProfile from "./component/Post";
 
 const API = "http://localhost:5000/api";
 
@@ -64,7 +65,6 @@ export default function Profile({ token, darkMode, setDarkMode }) {
       .then((r) => r.json())
       .then((data) => {
         if (orderTab.toLowerCase() === "unpaid") {
-          // Show only orders with orderStatus exactly "pending"
           setOrders(data.filter((o) => o.orderStatus === "pending"));
         } else {
           setOrders(data);
@@ -93,13 +93,12 @@ export default function Profile({ token, darkMode, setDarkMode }) {
     if (res.ok) {
       setOrders((orders) =>
         orders.map((o) =>
-          o.id === orderId
-            ? { ...o, orderStatus: "expired", receiveStatus: "received" }
-            : o
+          o.id === orderId ? { ...o, receiveStatus: "received" } : o
         )
       );
     } else {
-      alert("Failed to confirm receipt");
+      const err = await res.json();
+      alert(err?.error || "Failed to confirm receipt");
     }
   };
 
@@ -116,7 +115,9 @@ export default function Profile({ token, darkMode, setDarkMode }) {
   };
 
   const submitRating = async () => {
-    if (!ratingValue || !currentProduct) return alert("Please select a rating.");
+    if (!ratingValue || !currentProduct) {
+      return alert("Please select a rating.");
+    }
 
     const formData = new FormData();
     formData.append("userId", user.id);
@@ -143,6 +144,34 @@ export default function Profile({ token, darkMode, setDarkMode }) {
     }
   };
 
+  // New: Pay Now function
+  const payNow = async (orderId) => {
+    try {
+      const res = await fetch(`${API}/orders/pay/${orderId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (res.ok) {
+        alert("Payment successful.");
+        // Update orders to reflect payment
+        setOrders((orders) =>
+          orders.map((o) =>
+            o.id === orderId ? { ...o, orderStatus: "paid" } : o
+          )
+        );
+      } else {
+        const error = await res.json();
+        alert(error?.error || "Payment failed.");
+      }
+    } catch {
+      alert("Payment failed.");
+    }
+  };
+
   const renderOrderTabs = () => (
     <div className="mt-6">
       <div className="flex gap-4 border-b pb-2">
@@ -151,7 +180,7 @@ export default function Profile({ token, darkMode, setDarkMode }) {
             key={t}
             onClick={() => setOrderTab(t)}
             className={`px-3 py-1 rounded ${
-              orderTab === t
+              orderTab.toLowerCase() === t.toLowerCase()
                 ? "bg-indigo-600 text-white"
                 : "text-gray-600 hover:text-indigo-600"
             }`}
@@ -192,7 +221,16 @@ export default function Profile({ token, darkMode, setDarkMode }) {
               </div>
             </div>
             <div className="mt-3">
-              {order.orderStatus === "paid" && (
+              {order.orderStatus === "pending" && (
+                <button
+                  onClick={() => payNow(order.id)}
+                  className="px-4 py-2 bg-yellow-500 text-black rounded"
+                >
+                  Pay Now
+                </button>
+              )}
+
+              {order.orderStatus === "paid" && order.receiveStatus !== "received" && (
                 <button
                   onClick={() => confirmReceived(order.id)}
                   className="px-4 py-2 bg-green-600 text-white rounded"
@@ -200,8 +238,9 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                   Confirm Received
                 </button>
               )}
-              {order.orderStatus === "expired" && order.receiveStatus === "received" && (
-                <div className="flex items-center gap-4">
+
+              {order.orderStatus === "paid" && order.receiveStatus === "received" && (
+                <div className="flex items-center gap-4 mt-2">
                   <span className="text-green-600 font-semibold">Confirmed Received</span>
                   <button
                     className="px-3 py-1 bg-blue-600 text-white rounded"
@@ -221,11 +260,13 @@ export default function Profile({ token, darkMode, setDarkMode }) {
   const renderTabs = () => {
     switch (tab) {
       case "posts":
-        return <div className="mt-6">User posts or listings</div>;
+        return (
+          <div className="mt-6">
+            <SellerProfile />
+          </div>
+        );
       case "orders":
         return renderOrderTabs();
-      case "reviews":
-        return <div className="mt-6">Give and manage reviews</div>;
       case "admin":
         return (
           <div className="mt-6 space-y-2">
@@ -245,8 +286,7 @@ export default function Profile({ token, darkMode, setDarkMode }) {
       </div>
     );
 
-  if (error)
-    return <div className="text-center mt-10 text-red-500">{error}</div>;
+  if (error) return <div className="text-center mt-10 text-red-500">{error}</div>;
 
   if (!user) return null;
 
@@ -255,14 +295,12 @@ export default function Profile({ token, darkMode, setDarkMode }) {
   const tabs = [
     ...(isPrivilegedUser ? ["posts"] : []),
     "orders",
-    "reviews",
     ...(isPrivilegedUser ? ["admin"] : []),
   ];
 
   return (
     <div className={darkMode ? "dark" : ""}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-4 sm:p-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-6 mb-10">
           <div className="flex items-center gap-4">
             <FaUserCircle className="text-6xl text-indigo-600 dark:text-indigo-400" />
@@ -290,7 +328,6 @@ export default function Profile({ token, darkMode, setDarkMode }) {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-4 border-b pb-2 mb-6">
           {tabs.map((t) => (
             <button
@@ -307,10 +344,8 @@ export default function Profile({ token, darkMode, setDarkMode }) {
           ))}
         </div>
 
-        {/* Content */}
         {renderTabs()}
 
-        {/* Review Modal */}
         <Modal
           isOpen={showModal}
           onRequestClose={closeRatingModal}
@@ -344,10 +379,16 @@ export default function Profile({ token, darkMode, setDarkMode }) {
             className="mb-4"
           />
           <div className="flex justify-end gap-2">
-            <button onClick={closeRatingModal} className="px-3 py-1 bg-gray-300 rounded">
+            <button
+              onClick={closeRatingModal}
+              className="px-3 py-1 bg-gray-300 rounded"
+            >
               Cancel
             </button>
-            <button onClick={submitRating} className="px-3 py-1 bg-indigo-600 text-white rounded">
+            <button
+              onClick={submitRating}
+              className="px-3 py-1 bg-indigo-600 text-white rounded"
+            >
               Submit
             </button>
           </div>

@@ -394,6 +394,7 @@ function NavLink({ to, label, darkMode }) {
   );
 }
 
+
 function MobileNavLink({ to, label, darkMode }) {
   return (
     <Link

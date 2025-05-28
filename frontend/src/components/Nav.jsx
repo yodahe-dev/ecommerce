@@ -408,5 +408,4 @@ function MobileNavLink({ to, label, darkMode }) {
       {label}
     </Link>
   );
-
 }

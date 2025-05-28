@@ -343,7 +343,7 @@ const ProductActions = ({
                       title={platform.name}
                     >
                       <div 
-                        className="p-2.5 rounded-full bg-gray-100 dark:bg-gray-900/50 mb-2 transition-colors"
+                        className="p-0 rounded-full bg-gray-100 dark:bg-gray-900/50 mb-2 transition-colors"
                         style={{ backgroundColor: `${platformColors[platform.name]}10` }}
                       >
                         {React.cloneElement(platform.icon, {

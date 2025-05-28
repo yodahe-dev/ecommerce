@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 import Fuse from 'fuse.js';
-import { FiGrid, FiList, FiShoppingCart, FiSearch, FiX } from 'react-icons/fi';
-import { FaStar, FaHeart, FaRegHeart } from 'react-icons/fa';
-import { IoFilter } from 'react-icons/io5';
+import { FiGrid, FiList, FiShoppingCart, FiSearch, FiX, FiHeart, FiStar, FiClock, FiTruck, FiGift, FiShield } from 'react-icons/fi';
+import { FaStar, FaHeart, FaRegHeart, FaFire, FaBolt } from 'react-icons/fa';
+import { IoFilter, IoFlashSharp } from 'react-icons/io5';
+import { BiCategory, BiTrendingUp } from 'react-icons/bi';
 
 const API = 'http://localhost:5000/api';
 const fallbackImage = "/src/assets/hero/for.jpg";
@@ -24,6 +25,7 @@ const sortOptions = {
   'price-desc': { sortBy: 'price', order: 'DESC' },
   'price-asc': { sortBy: 'price', order: 'ASC' },
   popular: { sortBy: 'sold', order: 'DESC' },
+  'top-rated': { sortBy: 'rating', order: 'DESC' },
 };
 
 const conditionOptions = [
@@ -34,32 +36,54 @@ const conditionOptions = [
 ];
 
 const categoryOptions = [
-  { id: 'all', name: 'All Categories' },
-  { id: 'electronics', name: 'Electronics' },
-  { id: 'fashion', name: 'Fashion' },
-  { id: 'home', name: 'Home & Kitchen' },
-  { id: 'sports', name: 'Sports & Outdoors' },
-  { id: 'beauty', name: 'Beauty' },
+  { id: 'all', name: 'All Categories', icon: <BiCategory className="text-xl" /> },
+  { id: 'electronics', name: 'Electronics', icon: <FaBolt className="text-xl" /> },
+  { id: 'fashion', name: 'Fashion', icon: <FiGift className="text-xl" /> },
+  { id: 'home', name: 'Home & Kitchen', icon: <FiHeart className="text-xl" /> },
+  { id: 'sports', name: 'Sports & Outdoors', icon: <FiStar className="text-xl" /> },
+  { id: 'beauty', name: 'Beauty', icon: <FiStar className="text-xl" /> },
 ];
 
-export default function Search() {
+const serviceFeatures = [
+  { 
+    icon: <FiTruck className="text-3xl text-blue-500" />,
+    title: "Free Delivery",
+    description: "On orders over $50"
+  },
+  { 
+    icon: <FiClock className="text-3xl text-green-500" />,
+    title: "Fast Shipping",
+    description: "2-3 business days"
+  },
+  { 
+    icon: <FiShield className="text-3xl text-purple-500" />,
+    title: "Secure Payments",
+    description: "256-bit encryption"
+  },
+  { 
+    icon: <FiGift className="text-3xl text-red-500" />,
+    title: "Easy Returns",
+    description: "30-day policy"
+  }
+];
+
+export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [cardType, setCardType] = useState('grid');
   const [suggestions, setSuggestions] = useState([]);
   const [products, setProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [trendingProducts, setTrendingProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [cart] = useState(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
-  });
   const [likedProducts, setLikedProducts] = useState({});
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [priceRange, setPriceRange] = useState([0, 10000]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
   const currentUserId = localStorage.getItem("user_id");
   const abortControllerRef = useRef(null);
@@ -70,10 +94,73 @@ export default function Search() {
     includeScore: true,
   }), []);
 
+  // Fetch products with debounce
+  const fetchProducts = useCallback(debounce(async (query, sortKey, condition, category, priceRange) => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
+    try {
+      setLoading(true);
+      setError('');
+      const { sortBy, order } = sortOptions[sortKey] || sortOptions.newest;
+
+      const res = await axios.get(`${API}/products`, {
+        params: { 
+          search: query, 
+          sortBy, 
+          order,
+          condition: condition === 'all' ? undefined : condition,
+          category: category === 'all' ? undefined : category,
+          minPrice: priceRange[0],
+          maxPrice: priceRange[1]
+        },
+        signal: abortControllerRef.current.signal,
+      });
+
+      setProducts(res.data);
+    } catch (err) {
+      if (!axios.isCancel(err)) setError('Failed to fetch products');
+    } finally {
+      setLoading(false);
+    }
+  }, 300), []);
+
+  // Fetch featured and trending products
+  useEffect(() => {
+    const fetchSpecialProducts = async () => {
+      try {
+        const featuredRes = await axios.get(`${API}/products`, { 
+          params: { featured: true, limit: 4 } 
+        });
+        setFeaturedProducts(featuredRes.data);
+
+        const trendingRes = await axios.get(`${API}/products`, { 
+          params: { trending: true, limit: 8 } 
+        });
+        setTrendingProducts(trendingRes.data);
+      } catch (err) {
+        console.error("Error fetching special products:", err);
+      }
+    };
+
+    fetchSpecialProducts();
+  }, []);
+
+  // Fetch products on filter change
   useEffect(() => {
     fetchProducts(searchQuery, sortBy, selectedCondition, selectedCategory, priceRange);
-  }, [searchQuery, sortBy, selectedCondition, selectedCategory, priceRange]);
+  }, [searchQuery, sortBy, selectedCondition, selectedCategory, priceRange, fetchProducts]);
 
+  // Check scroll position for header effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Check product like status
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -116,36 +203,6 @@ export default function Search() {
   const buyNow = (product) => {
     navigate(`/checkout/${product.id}`);
   };
-
-  const fetchProducts = useCallback(debounce(async (query, sortKey, condition, category, priceRange) => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
-
-    try {
-      setLoading(true);
-      setError('');
-      const { sortBy, order } = sortOptions[sortKey] || sortOptions.newest;
-
-      const res = await axios.get(`${API}/products`, {
-        params: { 
-          search: query, 
-          sortBy, 
-          order,
-          condition: condition === 'all' ? undefined : condition,
-          category: category === 'all' ? undefined : category,
-          minPrice: priceRange[0],
-          maxPrice: priceRange[1]
-        },
-        signal: abortControllerRef.current.signal,
-      });
-
-      setProducts(res.data);
-    } catch (err) {
-      if (!axios.isCancel(err)) setError('Failed to fetch products');
-    } finally {
-      setLoading(false);
-    }
-  }, 300), []);
 
   const fetchSuggestions = useCallback(debounce(async (query) => {
     if (!query) return setSuggestions([]);
@@ -192,15 +249,24 @@ export default function Search() {
         className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden"
       >
         <div className="relative">
-          <img
-            src={product.imageUrl || fallbackImage}
-            alt={product.name}
-            onError={(e) => (e.target.src = fallbackImage)}
-            className="w-full h-64 object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-300"
-          />
+          <div className="relative aspect-square">
+            <img
+              src={product.imageUrl || fallbackImage}
+              alt={product.name}
+              onError={(e) => (e.target.src = fallbackImage)}
+              className="w-full h-full object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+          
+          {product.isFeatured && (
+            <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold z-10">
+              <FaFire className="inline mr-1" /> Featured
+            </div>
+          )}
+          
           <button
             onClick={e => toggleLike(e, product.id)}
-            className="absolute top-3 right-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm p-2 rounded-full shadow-lg hover:bg-red-100 hover:text-red-500 transition-colors"
+            className="absolute top-3 right-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm p-2 rounded-full shadow-lg hover:bg-red-100 hover:text-red-500 transition-colors z-10"
             aria-label={liked ? "Unlike" : "Like"}
           >
             {liked ? 
@@ -218,7 +284,7 @@ export default function Search() {
             </div>
             <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
               <FaStar className="text-yellow-400 mr-1" />
-              <span>4.5</span>
+              <span>{product.rating || 4.5}</span>
             </div>
           </div>
           
@@ -280,7 +346,7 @@ export default function Search() {
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-1">{product.name}</h3>
             <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
               <FaStar className="text-yellow-400 mr-1" />
-              <span>4.5</span>
+              <span>{product.rating || 4.5}</span>
             </div>
           </div>
           
@@ -303,11 +369,197 @@ export default function Search() {
 
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {/* Search Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-6">Discover Amazing Products</h1>
+      {/* Hero Section */}
+      <div className="relative bg-gradient-to-r from-indigo-900 to-purple-800 text-white overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/30 to-black/70"></div>
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://images.unsplash.com/photo-1607082350899-7e105aa886ae?auto=format&fit=crop&w=1920')] bg-cover bg-center opacity-20"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-4 py-24 md:py-32">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
+                Discover Amazing <span className="text-amber-400">Tech Deals</span> Today
+              </h1>
+              <p className="text-xl md:text-2xl mb-8 text-gray-200 max-w-xl">
+                Cutting-edge gadgets at unbeatable prices. Limited time offers on the latest tech innovations.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button 
+                  onClick={() => navigate('/products')}
+                  className="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-xl shadow-xl transition-all transform hover:-translate-y-1 hover:scale-105 duration-300 flex items-center justify-center"
+                >
+                  <FaFire className="mr-2" /> Shop Hot Deals
+                </button>
+                <button 
+                  onClick={() => document.getElementById('trending').scrollIntoView({ behavior: 'smooth' })}
+                  className="px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-xl shadow-xl transition-all duration-300 hover:bg-white/10"
+                >
+                  Explore Trending
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {featuredProducts.slice(0, 4).map((product, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => navigate(`/product/${product.id}`)}
+                  className="bg-white/10 backdrop-blur-sm rounded-xl p-4 cursor-pointer border border-white/20 hover:border-amber-400 transition-all duration-300 group"
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="mb-3 bg-white p-2 rounded-lg w-16 h-16 flex items-center justify-center">
+                      <img 
+                        src={product.imageUrl || fallbackImage} 
+                        alt={product.name}
+                        className="w-12 h-12 object-contain"
+                      />
+                    </div>
+                    <h3 className="text-white font-semibold text-center line-clamp-1 group-hover:text-amber-300">{product.name}</h3>
+                    <p className="text-amber-300 font-bold mt-1">{formatPrice(product.price)} ETB</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Service Features */}
+      <div className="py-12 bg-gradient-to-b from-white to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {serviceFeatures.map((feature, index) => (
+              <div 
+                key={index} 
+                className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-full">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{feature.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-400">{feature.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Categories Section */}
+      <div className="py-12 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Shop by Category</h2>
+            <button 
+              onClick={() => navigate('/categories')}
+              className="text-orange-500 hover:text-orange-600 font-medium flex items-center"
+            >
+              View All <FiX className="transform rotate-45 ml-1" />
+            </button>
+          </div>
           
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+            {categoryOptions.map((category) => (
+              <div 
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`flex flex-col items-center justify-center p-6 rounded-2xl cursor-pointer transition-all duration-300 ${
+                  selectedCategory === category.id
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg'
+                    : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-md hover:shadow-lg'
+                }`}
+              >
+                <div className="mb-3">
+                  {category.icon}
+                </div>
+                <h3 className="font-medium text-center">{category.name}</h3>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Trending Products */}
+      <div id="trending" className="py-12 bg-white dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+              <BiTrendingUp className="mr-3 text-orange-500" /> Trending Now
+            </h2>
+            <button 
+              onClick={() => navigate('/products?sort=popular')}
+              className="text-orange-500 hover:text-orange-600 font-medium flex items-center"
+            >
+              View All <FiX className="transform rotate-45 ml-1" />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {trendingProducts.map((product) => (
+              <div 
+                key={product.id} 
+                className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group"
+              >
+                <div className="absolute top-3 left-3 z-10">
+                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center">
+                    <IoFlashSharp className="mr-1" /> TRENDING
+                  </span>
+                </div>
+                
+                <div className="relative aspect-square">
+                  <img
+                    src={product.imageUrl || fallbackImage}
+                    alt={product.name}
+                    onError={(e) => (e.target.src = fallbackImage)}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                
+                <div className="p-4">
+                  <h3 className="font-bold text-gray-900 dark:text-white line-clamp-1 mb-1">{product.name}</h3>
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{product.category}</div>
+                    <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                      <FaStar className="text-yellow-400 mr-1" />
+                      <span>{product.rating || 4.5}</span>
+                    </div>
+                  </div>
+                  
+                  {renderPriceInfo(product)}
+                  
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        buyNow(product);
+                      }}
+                      className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm py-2 px-4 rounded-lg transition-all"
+                    >
+                      Buy Now
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/product/${product.id}`);
+                      }}
+                      className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-slate-700 text-sm py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Search Header */}
+      <div className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white dark:bg-gray-900 shadow-md py-3' : 'bg-transparent py-6'}`}>
+        <div className="max-w-7xl mx-auto px-4">
           <div className="relative">
             <div className="flex items-center">
               <div className="relative flex-1">
@@ -445,6 +697,7 @@ export default function Search() {
             >
               <option value="newest">Newest</option>
               <option value="popular">Popular</option>
+              <option value="top-rated">Top Rated</option>
               <option value="price-desc">Price: High to Low</option>
               <option value="price-asc">Price: Low to High</option>
               <option value="oldest">Oldest</option>

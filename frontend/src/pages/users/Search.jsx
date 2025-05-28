@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 import Fuse from 'fuse.js';
-import { FiGrid, FiList, FiShoppingCart, FiSearch, FiChevronDown } from 'react-icons/fi';
-import { FaStar, FaHeart, FaRegHeart, FaFire } from 'react-icons/fa';
-import { IoFlashSharp } from 'react-icons/io5';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FiGrid, FiList, FiShoppingCart, FiSearch, FiX } from 'react-icons/fi';
+import { FaStar, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { IoFilter } from 'react-icons/io5';
 
 const API = 'http://localhost:5000/api';
 const fallbackImage = "/src/assets/hero/for.jpg";
@@ -24,8 +23,24 @@ const sortOptions = {
   oldest: { sortBy: 'createdAt', order: 'ASC' },
   'price-desc': { sortBy: 'price', order: 'DESC' },
   'price-asc': { sortBy: 'price', order: 'ASC' },
-  popular: { sortBy: 'soldCount', order: 'DESC' },
+  popular: { sortBy: 'sold', order: 'DESC' },
 };
+
+const conditionOptions = [
+  { id: 'all', name: 'All Conditions' },
+  { id: 'new', name: 'Brand New' },
+  { id: 'used', name: 'Used' },
+  { id: 'refurbished', name: 'Refurbished' },
+];
+
+const categoryOptions = [
+  { id: 'all', name: 'All Categories' },
+  { id: 'electronics', name: 'Electronics' },
+  { id: 'fashion', name: 'Fashion' },
+  { id: 'home', name: 'Home & Kitchen' },
+  { id: 'sports', name: 'Sports & Outdoors' },
+  { id: 'beauty', name: 'Beauty' },
+];
 
 export default function Search() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,16 +50,19 @@ export default function Search() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [cart, setCart] = useState(() => {
+  const [cart] = useState(() => {
     const saved = localStorage.getItem('cart');
     return saved ? JSON.parse(saved) : [];
   });
   const [likedProducts, setLikedProducts] = useState({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCondition, setSelectedCondition] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
   const currentUserId = localStorage.getItem("user_id");
   const abortControllerRef = useRef(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
 
   const fuse = useMemo(() => new Fuse([], {
     keys: ['name', 'description', 'category'],
@@ -53,46 +71,35 @@ export default function Search() {
   }), []);
 
   useEffect(() => {
-    axios.get(`${API}/products`)
-      .then(res => setProducts(res.data))
-      .catch(err => console.error("Error fetching products:", err));
-  }, []);
+    fetchProducts(searchQuery, sortBy, selectedCondition, selectedCategory, priceRange);
+  }, [searchQuery, sortBy, selectedCondition, selectedCategory, priceRange]);
 
   useEffect(() => {
-    if (!currentUserId || products.length === 0) return;
+    if (!currentUserId) return;
 
-    const fetchLikes = async () => {
-      const likesData = {};
-      for (const product of products) {
-        try {
-          const res = await axios.post(`${API}/isLiked`, {
-            userId: currentUserId,
-            productId: product.id,
-          });
-          likesData[product.id] = res.data.liked;
-        } catch (err) {
-          console.error("Error checking like status:", err);
-          likesData[product.id] = false;
-        }
-      }
-      setLikedProducts(likesData);
-    };
-
-    fetchLikes();
+    products.forEach(product => {
+      axios.post(`${API}/isLiked`, {
+        userId: currentUserId,
+        productId: product.id,
+      })
+      .then(res => {
+        setLikedProducts(prev => ({
+          ...prev,
+          [product.id]: res.data.liked,
+        }));
+      })
+      .catch(err => console.error("Error checking like status:", err));
+    });
   }, [products, currentUserId]);
 
   const toggleLike = async (e, productId) => {
     e.stopPropagation();
     if (!currentUserId) {
-      navigate('/login');
+      alert("You must be logged in to like a product.");
       return;
     }
 
     const liked = likedProducts[productId];
-    const newLikedState = !liked;
-
-    // Optimistic UI update
-    setLikedProducts(prev => ({ ...prev, [productId]: newLikedState }));
 
     try {
       if (liked) {
@@ -100,41 +107,17 @@ export default function Search() {
       } else {
         await axios.post(`${API}/like`, { userId: currentUserId, productId });
       }
+      setLikedProducts(prev => ({ ...prev, [productId]: !liked }));
     } catch (error) {
       console.error("Error toggling like:", error);
-      // Revert on error
-      setLikedProducts(prev => ({ ...prev, [productId]: liked }));
     }
   };
 
   const buyNow = (product) => {
-    const exists = cart.find(item => item.id === product.id);
-    const updatedCart = exists
-      ? cart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item)
-      : [...cart, { ...product, qty: 1 }];
-
-    setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
     navigate(`/checkout/${product.id}`);
   };
 
-  const addToCart = (e, product) => {
-    e.stopPropagation();
-    const exists = cart.find(item => item.id === product.id);
-    const updatedCart = exists
-      ? cart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item)
-      : [...cart, { ...product, qty: 1 }];
-
-    setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    
-    // Show visual feedback
-    const button = e.currentTarget;
-    button.classList.add('bg-green-500');
-    setTimeout(() => button.classList.remove('bg-green-500'), 300);
-  };
-
-  const fetchProducts = useCallback(debounce(async (query, sortKey) => {
+  const fetchProducts = useCallback(debounce(async (query, sortKey, condition, category, priceRange) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
@@ -144,7 +127,15 @@ export default function Search() {
       const { sortBy, order } = sortOptions[sortKey] || sortOptions.newest;
 
       const res = await axios.get(`${API}/products`, {
-        params: { search: query, sortBy, order },
+        params: { 
+          search: query, 
+          sortBy, 
+          order,
+          condition: condition === 'all' ? undefined : condition,
+          category: category === 'all' ? undefined : category,
+          minPrice: priceRange[0],
+          maxPrice: priceRange[1]
+        },
         signal: abortControllerRef.current.signal,
       });
 
@@ -157,26 +148,16 @@ export default function Search() {
   }, 300), []);
 
   const fetchSuggestions = useCallback(debounce(async (query) => {
-    if (!query) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    
+    if (!query) return setSuggestions([]);
     try {
       const { data } = await axios.get(`${API}/products`, { params: { limit: 50 } });
       fuse.setCollection(data);
       const results = fuse.search(query).slice(0, 5).map(r => r.item);
       setSuggestions(results);
-      setShowSuggestions(true);
     } catch {
       setSuggestions([]);
     }
   }, 200), [fuse]);
-
-  useEffect(() => {
-    fetchProducts(searchQuery, sortBy);
-  }, [searchQuery, sortBy, fetchProducts]);
 
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -184,321 +165,301 @@ export default function Search() {
     fetchSuggestions(query);
   };
 
-  const handleSuggestionClick = (product) => {
-    navigate(`/product/${product.id}`);
-    setShowSuggestions(false);
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSuggestions([]);
   };
 
   const renderPriceInfo = (product) => {
     const discount = getDiscountPercent(product.lastPrice, product.price);
     return product.lastPrice ? (
-      <div className="flex flex-wrap items-baseline gap-1">
-        <p className="text-lg font-bold text-orange-600">{formatPrice(product.price)} ETB</p>
-        <p className="text-sm line-through text-gray-500">{formatPrice(product.lastPrice)} ETB</p>
-        {discount && (
-          <span className="ml-1 px-1.5 py-0.5 bg-red-100 text-red-800 text-xs font-semibold rounded-full">
-            {discount}
-          </span>
-        )}
+      <div className="flex items-center gap-2">
+        <p className="text-orange-500 font-bold text-base md:text-lg">{formatPrice(product.price)} ETB</p>
+        <p className="line-through text-gray-500 dark:text-gray-400 text-sm">{formatPrice(product.lastPrice)} ETB</p>
+        {discount && <span className="ml-1 bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full">{discount}</span>}
       </div>
     ) : (
-      <p className="text-lg font-bold text-orange-600">{formatPrice(product.price)} ETB</p>
+      <p className="text-orange-500 font-bold text-base md:text-lg">{formatPrice(product.price)} ETB</p>
     );
   };
 
-  const renderRating = (product) => (
-    <div className="flex items-center gap-1 text-sm">
-      <div className="flex items-center text-amber-400">
-        {[...Array(5)].map((_, i) => (
-          <FaStar key={i} className={`${i < 4 ? 'fill-current' : 'text-gray-300'}`} />
-        ))}
-      </div>
-      <span className="text-gray-600">(42)</span>
-      {product.soldCount > 0 && (
-        <div className="flex items-center ml-2 text-gray-600">
-          <FaFire className="text-orange-500 mr-1" />
-          <span>{product.soldCount} sold</span>
-        </div>
-      )}
-    </div>
-  );
-
   const renderGridCard = (product) => {
     const liked = likedProducts[product.id];
-    const discount = getDiscountPercent(product.lastPrice, product.price);
-    
     return (
-      <motion.div
-        key={product.id}
-        layout
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        onClick={() => navigate(`/product/${product.id}`)}
-        className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden border border-gray-100 dark:border-gray-700"
+      <div 
+        key={product.id} 
+        onClick={() => navigate(`/product/${product.id}`)} 
+        className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden"
       >
         <div className="relative">
-          {discount && (
-            <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md z-10">
-              {discount}
-            </div>
-          )}
-          <div className="absolute top-3 right-3 z-10">
-            <button
-              onClick={e => toggleLike(e, product.id)}
-              className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors"
-              aria-label={liked ? "Unlike" : "Like"}
-            >
-              {liked ? (
-                <FaHeart className="text-red-500 w-5 h-5" />
-              ) : (
-                <FaRegHeart className="text-gray-500 w-5 h-5 hover:text-red-500" />
-              )}
-            </button>
-          </div>
-          
-          <div className="aspect-square overflow-hidden">
-            <img
-              src={product.imageUrl || fallbackImage}
-              alt={product.name}
-              onError={(e) => (e.target.src = fallbackImage)}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          </div>
+          <img
+            src={product.imageUrl || fallbackImage}
+            alt={product.name}
+            onError={(e) => (e.target.src = fallbackImage)}
+            className="w-full h-64 object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-300"
+          />
+          <button
+            onClick={e => toggleLike(e, product.id)}
+            className="absolute top-3 right-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm p-2 rounded-full shadow-lg hover:bg-red-100 hover:text-red-500 transition-colors"
+            aria-label={liked ? "Unlike" : "Like"}
+          >
+            {liked ? 
+              <FaHeart className="text-red-500 text-lg" /> : 
+              <FaRegHeart className="text-gray-600 dark:text-gray-300 text-lg" />
+            }
+          </button>
         </div>
         
         <div className="p-4 space-y-2">
           <div className="flex justify-between items-start">
-            <h2 className="font-semibold text-gray-900 dark:text-white line-clamp-1">{product.name}</h2>
-            {product.isNew && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                New
-              </span>
-            )}
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-1">{product.name}</h2>
+              <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{product.category}</div>
+            </div>
+            <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+              <FaStar className="text-yellow-400 mr-1" />
+              <span>4.5</span>
+            </div>
           </div>
           
-          {renderRating(product)}
-          
-          <div className="mt-1">
-            {renderPriceInfo(product)}
-          </div>
+          {renderPriceInfo(product)}
           
           <div className="flex gap-2 mt-4">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                addToCart(e, product);
+                buyNow(product);
               }}
-              className="flex-1 flex items-center justify-center gap-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-sm py-2.5 rounded-lg transition-all duration-300 shadow hover:shadow-md"
+              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm py-2 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
             >
-              <FiShoppingCart className="w-4 h-4" />
-              <span>Add to Cart</span>
+              Buy Now
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                buyNow(product);
+                navigate(`/product/${product.id}`);
               }}
-              className="flex-1 bg-white border border-orange-500 text-orange-500 hover:bg-orange-50 text-sm py-2.5 rounded-lg transition-colors duration-300"
+              className="flex-1 border border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-slate-700 text-sm py-2 px-4 rounded-lg transition-colors"
             >
-              Buy Now
+              Details
             </button>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
   const renderListCard = (product) => {
     const liked = likedProducts[product.id];
-    
     return (
-      <motion.div
-        key={product.id}
-        layout
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={() => navigate(`/product/${product.id}`)}
-        className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-4 cursor-pointer shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 dark:border-gray-700"
+      <div 
+        key={product.id} 
+        onClick={() => navigate(`/product/${product.id}`)} 
+        className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-4 cursor-pointer shadow hover:shadow-md transition-all"
       >
         <div className="relative">
-          <div className="w-24 h-24 rounded-lg overflow-hidden">
-            <img
-              src={product.imageUrl || fallbackImage}
-              alt={product.name}
-              onError={(e) => (e.target.src = fallbackImage)}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <img
+            src={product.imageUrl || fallbackImage}
+            alt={product.name}
+            onError={(e) => (e.target.src = fallbackImage)}
+            className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-xl"
+          />
           <button
             onClick={e => toggleLike(e, product.id)}
-            className="absolute -top-2 -right-2 p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-sm hover:text-red-500"
+            className="absolute top-2 right-2 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm p-1.5 rounded-full shadow"
           >
-            {liked ? (
-              <FaHeart className="text-red-500 w-4 h-4" />
-            ) : (
-              <FaRegHeart className="text-gray-500 w-4 h-4" />
-            )}
+            {liked ? 
+              <FaHeart className="text-red-500 text-sm" /> : 
+              <FaRegHeart className="text-gray-600 dark:text-gray-300 text-sm" />
+            }
           </button>
         </div>
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">{product.name}</h3>
-            {product.isNew && (
-              <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                New
-              </span>
-            )}
+        <div className="flex-1">
+          <div className="flex justify-between">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-1">{product.name}</h3>
+            <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+              <FaStar className="text-yellow-400 mr-1" />
+              <span>4.5</span>
+            </div>
           </div>
           
-          <div className="mb-2">
-            {renderRating(product)}
-          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 capitalize mb-2">{product.category}</div>
           
-          <div className="mb-3">
-            {renderPriceInfo(product)}
-          </div>
+          <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 mb-3">{product.description}</p>
           
-          <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">
-            {product.description}
-          </p>
+          {renderPriceInfo(product)}
         </div>
         
-        <div className="flex flex-col gap-2">
-          <button 
-            onClick={(e) => { e.stopPropagation(); addToCart(e, product); }}
-            className="px-4 py-2 flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all duration-300 shadow hover:shadow-md"
-          >
-            <FiShoppingCart className="w-4 h-4" />
-            <span>Cart</span>
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); buyNow(product); }}
-            className="px-4 py-2 border border-orange-500 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
-          >
-            Buy Now
-          </button>
-        </div>
-      </motion.div>
+        <button 
+          onClick={(e) => { e.stopPropagation(); buyNow(product); }} 
+          className="hidden md:flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-2 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
+        >
+          <FiShoppingCart className="text-lg" /> Buy Now
+        </button>
+      </div>
     );
   };
 
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Search Header */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+      <div className="bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-6">Discover Amazing Products</h1>
+          
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <FiSearch className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              value={searchQuery}
-              onChange={handleSearchChange}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              placeholder="Search for products, brands, categories..."
-              className="block w-full pl-12 pr-4 py-3.5 rounded-xl border-0 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:bg-white dark:focus:bg-gray-800 transition-all"
-            />
-            
-            <AnimatePresence>
-              {showSuggestions && suggestions.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute z-40 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-                >
-                  {suggestions.map((product) => (
-                    <div 
-                      key={product.id} 
-                      onClick={() => handleSuggestionClick(product)}
-                      className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
-                    >
-                      <div className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden">
-                        <img
-                          src={product.imageUrl || fallbackImage}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="ml-4 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-200 truncate">
-                          {product.name}
-                        </div>
-                        <div className="text-sm text-orange-500 font-semibold">
-                          ETB {formatPrice(product.price)}
-                        </div>
-                      </div>
-                      <div className="ml-auto text-xs text-gray-500 capitalize">
-                        {product.category}
-                      </div>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <button 
-                  onClick={() => setFilterOpen(!filterOpen)}
-                  className="flex items-center gap-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-700 dark:text-gray-300 text-sm font-medium transition-colors"
-                >
-                  <span>Filters</span>
-                  <FiChevronDown className={`transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {filterOpen && (
-                  <div className="absolute z-10 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 border border-gray-200 dark:border-gray-700">
-                    <div className="text-xs font-medium text-gray-500 uppercase mb-2">Categories</div>
-                    <div className="space-y-2">
-                      {['Electronics', 'Clothing', 'Home', 'Beauty'].map(category => (
-                        <label key={category} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                          <input type="checkbox" className="rounded text-orange-500" />
-                          {category}
-                        </label>
-                      ))}
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
-                      <button className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors">
-                        Apply Filters
-                      </button>
-                    </div>
-                  </div>
+            <div className="flex items-center">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                  <FiSearch className="text-gray-500 text-xl" />
+                </div>
+                <input
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  placeholder="Search products, brands, categories..."
+                  className="w-full pl-12 pr-10 py-4 rounded-2xl bg-white dark:bg-gray-800 text-gray-800 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-lg"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={clearSearch}
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-500 hover:text-gray-700"
+                  >
+                    <FiX className="text-xl" />
+                  </button>
                 )}
               </div>
               
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="pl-4 pr-10 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-700 dark:text-gray-300 text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjYgOSAxMiAxNSAxOCA5Ij48L3BvbHlsaW5lPjwvc3ZnPg==')] bg-no-repeat bg-[center_right_1rem]"
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className={`ml-3 p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-lg flex items-center transition-all ${showFilters ? 'text-orange-500' : 'text-gray-500'}`}
               >
-                <option value="newest">Newest</option>
-                <option value="popular">Popular</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="oldest">Oldest</option>
-              </select>
+                <IoFilter className="text-2xl" />
+              </button>
             </div>
             
-            <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+            {(suggestions.length > 0 && isSearchFocused) && (
+              <div className="absolute z-30 mt-2 w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                {suggestions.map((product) => (
+                  <div 
+                    key={product.id} 
+                    onClick={() => navigate(`/product/${product.id}`)} 
+                    className="flex items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                  >
+                    <img
+                      src={product.imageUrl || fallbackImage}
+                      alt={product.name}
+                      onError={(e) => (e.target.src = fallbackImage)}
+                      className="w-10 h-10 rounded-lg object-cover mr-4"
+                    />
+                    <div className="flex-1">
+                      <div className="text-gray-800 dark:text-gray-200 font-medium truncate">{product.name}</div>
+                      <div className="text-sm text-orange-500">ETB {formatPrice(product.price)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="bg-white dark:bg-gray-800 shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-3">Condition</h3>
+              <div className="flex flex-wrap gap-2">
+                {conditionOptions.map((condition) => (
+                  <button
+                    key={condition.id}
+                    onClick={() => setSelectedCondition(condition.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selectedCondition === condition.id
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {condition.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-3">Category</h3>
+              <div className="flex flex-wrap gap-2">
+                {categoryOptions.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selectedCategory === category.id
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-3">Price Range</h3>
+              <div className="px-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="10000"
+                  step="100"
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                />
+                <div className="flex justify-between mt-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">ETB 0</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">ETB {priceRange[1].toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Controls */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            {products.length} {products.length === 1 ? 'product' : 'products'} found
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              <option value="newest">Newest</option>
+              <option value="popular">Popular</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="oldest">Oldest</option>
+            </select>
+            
+            <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
               <button 
                 onClick={() => setCardType('grid')} 
-                className={`p-2 rounded-xl transition-colors ${cardType === 'grid' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                aria-label="Grid view"
+                className={`p-2 rounded-xl transition-colors ${cardType === 'grid' ? 'bg-white dark:bg-gray-800 shadow-sm text-orange-500' : 'text-gray-500'}`}
               >
                 <FiGrid className="w-5 h-5" />
               </button>
               <button 
                 onClick={() => setCardType('list')} 
-                className={`p-2 rounded-xl transition-colors ${cardType === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                aria-label="List view"
+                className={`p-2 rounded-xl transition-colors ${cardType === 'list' ? 'bg-white dark:bg-gray-800 shadow-sm text-orange-500' : 'text-gray-500'}`}
               >
                 <FiList className="w-5 h-5" />
               </button>
@@ -507,63 +468,64 @@ export default function Search() {
         </div>
       </div>
 
-      {/* Product Grid */}
-      <div className="flex-1 px-4 sm:px-6 py-6 pb-20">
+      {/* Products Grid */}
+      <div className="flex-1 px-4 py-6">
         {loading ? (
-          <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 animate-pulse border border-gray-100 dark:border-gray-700">
-                <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg mb-4" />
-                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded mb-3 w-3/4" />
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow animate-pulse">
+                <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-xl mb-4" />
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-3 w-3/4" />
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-1/2" />
-                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mt-4" />
+                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg mt-4" />
               </div>
             ))}
           </div>
         ) : error ? (
-          <div className="max-w-7xl mx-auto text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
-              <IoFlashSharp className="w-8 h-8" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Failed to load products</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
-            <button
-              onClick={() => fetchProducts(searchQuery, sortBy)}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
+          <div className="max-w-7xl mx-auto text-center py-12">
+            <div className="text-red-500 text-xl mb-4">{error}</div>
+            <button 
+              onClick={() => fetchProducts(searchQuery, sortBy, selectedCondition, selectedCategory, priceRange)}
+              className="px-6 py-3 bg-orange-500 text-white rounded-xl shadow hover:bg-orange-600 transition-colors"
             >
-              Retry
+              Try Again
             </button>
           </div>
         ) : products.length === 0 ? (
-          <div className="max-w-7xl mx-auto text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-500 mb-4">
-              <FiSearch className="w-8 h-8" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No products found</h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-              Try adjusting your search or filter to find what you're looking for
-            </p>
+          <div className="max-w-7xl mx-auto text-center py-12">
+            <div className="text-5xl mb-4">🔍</div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No products found</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Try adjusting your search or filter criteria</p>
+            <button 
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCondition('all');
+                setSelectedCategory('all');
+                setPriceRange([0, 10000]);
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl shadow hover:from-orange-600 hover:to-amber-600 transition-all"
+            >
+              Clear Filters
+            </button>
           </div>
         ) : cardType === 'grid' ? (
-          <motion.div 
-            layout
-            className="max-w-7xl mx-auto grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          >
-            <AnimatePresence>
-              {products.map(renderGridCard)}
-            </AnimatePresence>
-          </motion.div>
+          <div className="max-w-7xl mx-auto grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {products.map(renderGridCard)}
+          </div>
         ) : (
-          <motion.div 
-            layout
-            className="max-w-7xl mx-auto space-y-4"
-          >
-            <AnimatePresence>
-              {products.map(renderListCard)}
-            </AnimatePresence>
-          </motion.div>
+          <div className="max-w-7xl mx-auto space-y-4">
+            {products.map(renderListCard)}
+          </div>
         )}
       </div>
+      
+      {/* Floating Action Button */}
+      <button 
+        onClick={() => setShowFilters(!showFilters)}
+        className="fixed bottom-6 right-6 p-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full shadow-lg z-10 md:hidden hover:from-orange-600 hover:to-amber-600 transition-all"
+      >
+        <IoFilter className="text-2xl" />
+      </button>
     </div>
   );
 }

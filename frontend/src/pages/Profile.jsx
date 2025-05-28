@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { FaUserCircle, FaSpinner, FaCopy, FaStar, FaChevronRight } from "react-icons/fa";
-import { MdDarkMode, MdLightMode, MdOutlineInventory, MdOutlineReceipt, MdDashboard } from "react-icons/md";
+import React, { useState, useEffect, useRef, Fragment } from "react";
+import { FaUserCircle, FaSpinner, FaCopy, FaStar } from "react-icons/fa";
+import { 
+  MdDarkMode, 
+  MdLightMode, 
+  MdOutlineInventory, 
+  MdOutlineReceipt, 
+  MdDashboard,
+  MdClose
+} from "react-icons/md";
 import { HiOutlineShoppingBag, HiOutlineCreditCard } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
-import Modal from "react-modal";
+import { Dialog, Transition } from '@headlessui/react';
+import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { getProfile } from "../api";
 import SellerProfile from "./component/profile/Post";
 
@@ -22,7 +30,17 @@ export default function Profile({ token, darkMode, setDarkMode }) {
   const [ratingValue, setRatingValue] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
   const [imageFile, setImageFile] = useState(null);
-
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    username: "",
+    bio: "",
+    oldPassword: "",
+    newPassword: "",
+    shopName: ""
+  });
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [editError, setEditError] = useState("");
+  const avatarInputRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +56,15 @@ export default function Profile({ token, darkMode, setDarkMode }) {
           navigate("/login");
         } else {
           setUser(res);
+          // Initialize edit form data
+          setEditFormData({
+            username: res.username,
+            bio: res.bio || "",
+            oldPassword: "",
+            newPassword: "",
+            shopName: res.shopName || ""
+          });
+          setAvatarPreview(res.avatarUrl || null);
         }
         setLoading(false);
       })
@@ -185,6 +212,62 @@ export default function Profile({ token, darkMode, setDarkMode }) {
     );
   };
 
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerAvatarInput = () => {
+    avatarInputRef.current.click();
+  };
+
+  const handleEditProfileSubmit = async (e) => {
+    e.preventDefault();
+    setEditError("");
+    
+    // Basic validation
+    if (editFormData.newPassword && editFormData.newPassword !== editFormData.confirmPassword) {
+      setEditError("New passwords do not match");
+      return;
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append("username", editFormData.username);
+      formData.append("bio", editFormData.bio);
+      if (editFormData.oldPassword) formData.append("oldPassword", editFormData.oldPassword);
+      if (editFormData.newPassword) formData.append("newPassword", editFormData.newPassword);
+      if (avatarInputRef.current.files[0]) formData.append("avatar", avatarInputRef.current.files[0]);
+      if (user.role?.name === "seller") formData.append("shopName", editFormData.shopName);
+      
+      const res = await fetch(`${API}/users/profile`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUser(updatedUser);
+        setShowEditProfileModal(false);
+        alert("Profile updated successfully!");
+      } else {
+        const error = await res.json();
+        setEditError(error.message || "Failed to update profile");
+      }
+    } catch (err) {
+      setEditError("Network error. Please try again later.");
+    }
+  };
+
   const renderOrderTabs = () => (
     <div className="mt-6">
       <div className="flex flex-wrap gap-2 pb-2">
@@ -216,14 +299,30 @@ export default function Profile({ token, darkMode, setDarkMode }) {
             className="border rounded-xl p-4 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow duration-300"
           >
             <div className="flex flex-col sm:flex-row gap-4">
-              {order.product.mainImage && (
+              {order.product.imageUrl ? (
                 <div className="flex-shrink-0">
                   <img
-                    src={`http://localhost:5173/${order.product.mainImage}`}
+                    src={order.product.imageUrl}
                     alt={order.product.name}
                     className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg cursor-pointer border dark:border-gray-700"
                     onClick={() => navigate(`/product/${order.product.id}`)}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.parentNode.innerHTML = `
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border dark:border-gray-700">
+                          <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path>
+                          </svg>
+                        </div>
+                      `;
+                    }}
                   />
+                </div>
+              ) : (
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border dark:border-gray-700">
+                  <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path>
+                  </svg>
                 </div>
               )}
               <div className="flex-1">
@@ -241,7 +340,7 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                   </div>
                   <div className="flex flex-col sm:items-end gap-1">
                     <div className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">
-                      ${order.product.price.toFixed(2)}
+                      {order.product.price} ETB
                     </div>
                     <div className="flex gap-2">
                       {statusBadge(order.orderStatus)}
@@ -313,7 +412,7 @@ export default function Profile({ token, darkMode, setDarkMode }) {
               <div className="mt-2 text-gray-500 dark:text-gray-400">Total Orders</div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <div className="text-3xl font-bold text-green-500">$1,284</div>
+              <div className="text-3xl font-bold text-green-500">1,284 ETB</div>
               <div className="mt-2 text-gray-500 dark:text-gray-400">Total Revenue</div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
@@ -333,7 +432,7 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold">ETB 129.99</div>
+                      <div className="font-semibold">129.99 ETB</div>
                       <div className="text-sm text-green-500">24 sold</div>
                     </div>
                   </div>
@@ -380,7 +479,15 @@ export default function Profile({ token, darkMode, setDarkMode }) {
           <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-10">
             <div className="flex items-start gap-5">
               <div className="relative">
-                <FaUserCircle className="text-7xl text-indigo-600 dark:text-indigo-400" />
+                {avatarPreview ? (
+                  <img 
+                    src={avatarPreview} 
+                    alt="Avatar" 
+                    className="w-16 h-16 rounded-full object-cover border-2 border-indigo-500"
+                  />
+                ) : (
+                  <FaUserCircle className="text-7xl text-indigo-600 dark:text-indigo-400" />
+                )}
                 <div className="absolute -bottom-2 -right-2 bg-indigo-500 text-white rounded-full px-2.5 py-0.5 text-xs font-medium">
                   {userRole || "User"}
                 </div>
@@ -400,10 +507,20 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                     <span className="text-sm text-green-500 ml-1">{copySuccess}</span>
                   )}
                 </div>
+                {user.bio && (
+                  <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-lg">
+                    {user.bio}
+                  </p>
+                )}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <div className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-sm">
                     {userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : "User"}
                   </div>
+                  {user.shopName && (
+                    <div className="bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-full text-sm">
+                      {user.shopName}
+                    </div>
+                  )}
                   <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-sm">
                     24 Orders
                   </div>
@@ -419,7 +536,10 @@ export default function Profile({ token, darkMode, setDarkMode }) {
               >
                 {darkMode ? <MdLightMode className="text-xl" /> : <MdDarkMode className="text-xl" />}
               </button>
-              <button className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors">
+              <button 
+                onClick={() => setShowEditProfileModal(true)}
+                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors"
+              >
                 Edit Profile
               </button>
             </div>
@@ -450,101 +570,326 @@ export default function Profile({ token, darkMode, setDarkMode }) {
         </div>
 
         {/* Rating Modal */}
-        <Modal
-          isOpen={showModal}
-          onRequestClose={closeRatingModal}
-          contentLabel="Rate Product"
-          className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl outline-none"
-          overlayClassName="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          ariaHideApp={false}
-        >
-          <div className="mb-5">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <FaStar className="text-amber-400" />
-              Rate {currentProduct?.name}
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Share your experience with this product
-            </p>
-          </div>
-          
-          <div className="flex justify-center mb-6">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                onClick={() => setRatingValue(star)}
-                className="p-2 focus:outline-none"
-                aria-label={`Rate ${star} stars`}
-              >
-                <FaStar
-                  className={`text-3xl transition-transform hover:scale-110 ${
-                    star <= ratingValue ? "text-amber-400" : "text-gray-300 dark:text-gray-600"
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Your Feedback
-              </label>
-              <textarea
-                placeholder="What did you like or dislike? Share details about your experience..."
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700/50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
-                rows={4}
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Add Photo (Optional)
-              </label>
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg className="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF (MAX. 5MB)</p>
-                  </div>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => setImageFile(e.target.files[0])} 
-                    className="hidden" 
-                  />
-                </label>
+        <Transition appear show={showModal} as={Fragment}>
+          <Dialog as="div" className="relative z-50" onClose={closeRatingModal}>
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+            >
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+            </Transition.Child>
+
+            <div className="fixed inset-0 overflow-y-auto">
+              <div className="flex min-h-full items-center justify-center p-4 text-center">
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
+                >
+                  <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                    <div className="flex justify-between items-center mb-4">
+                      <Dialog.Title
+                        as="h3"
+                        className="text-lg font-bold leading-6 text-gray-900 dark:text-white flex items-center gap-2"
+                      >
+                        <FaStar className="text-amber-400" />
+                        Rate {currentProduct?.name}
+                      </Dialog.Title>
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                        onClick={closeRatingModal}
+                      >
+                        <MdClose className="h-6 w-6" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex justify-center mb-6">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setRatingValue(star)}
+                          className="p-2 focus:outline-none"
+                          aria-label={`Rate ${star} stars`}
+                        >
+                          <FaStar
+                            className={`text-3xl transition-transform hover:scale-110 ${
+                              star <= ratingValue ? "text-amber-400" : "text-gray-300 dark:text-gray-600"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Your Feedback
+                        </label>
+                        <textarea
+                          placeholder="What did you like or dislike? Share details about your experience..."
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700/50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                          rows={4}
+                          value={feedbackText}
+                          onChange={(e) => setFeedbackText(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Add Photo (Optional)
+                        </label>
+                        <div className="flex items-center justify-center w-full">
+                          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <svg className="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                              </svg>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                <span className="font-semibold text-indigo-600 dark:text-indigo-400">Click to upload</span> or drag and drop
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF (MAX. 5MB)</p>
+                            </div>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => setImageFile(e.target.files[0])} 
+                              className="hidden" 
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-8 flex justify-end gap-3">
+                      <button
+                        onClick={closeRatingModal}
+                        className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={submitRating}
+                        disabled={!ratingValue}
+                        className={`px-5 py-2.5 rounded-lg font-medium transition-colors ${
+                          ratingValue 
+                            ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                            : "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Submit Review
+                      </button>
+                    </div>
+                  </Dialog.Panel>
+                </Transition.Child>
               </div>
             </div>
-          </div>
-          
-          <div className="mt-8 flex justify-end gap-3">
-            <button
-              onClick={closeRatingModal}
-              className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          </Dialog>
+        </Transition>
+
+        {/* Edit Profile Modal */}
+        <Transition appear show={showEditProfileModal} as={Fragment}>
+          <Dialog as="div" className="relative z-50" onClose={() => setShowEditProfileModal(false)}>
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
             >
-              Cancel
-            </button>
-            <button
-              onClick={submitRating}
-              disabled={!ratingValue}
-              className={`px-5 py-2.5 rounded-lg font-medium transition-colors ${
-                ratingValue 
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
-              }`}
-            >
-              Submit Review
-            </button>
-          </div>
-        </Modal>
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+            </Transition.Child>
+
+            <div className="fixed inset-0 overflow-y-auto">
+              <div className="flex min-h-full items-center justify-center p-4 text-center">
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
+                >
+                  <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                    <div className="flex justify-between items-center mb-4">
+                      <Dialog.Title
+                        as="h3"
+                        className="text-lg font-bold leading-6 text-gray-900 dark:text-white"
+                      >
+                        Edit Profile
+                      </Dialog.Title>
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                        onClick={() => setShowEditProfileModal(false)}
+                      >
+                        <MdClose className="h-6 w-6" />
+                      </button>
+                    </div>
+                    
+                    <form onSubmit={handleEditProfileSubmit}>
+                      <div className="space-y-4">
+                        {/* Avatar Upload */}
+                        <div className="flex flex-col items-center mb-4">
+                          <div className="relative">
+                            {avatarPreview ? (
+                              <img 
+                                src={avatarPreview} 
+                                alt="Avatar" 
+                                className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500"
+                              />
+                            ) : (
+                              <div className="bg-gray-200 border-2 border-dashed rounded-full w-24 h-24 flex items-center justify-center">
+                                <FaUserCircle className="text-4xl text-gray-400" />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-md border border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
+                              onClick={triggerAvatarInput}
+                            >
+                              <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                              </svg>
+                            </button>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={avatarInputRef}
+                              onChange={handleAvatarChange}
+                              className="hidden"
+                            />
+                          </div>
+                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Click to change profile picture
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Username
+                          </label>
+                          <input
+                            type="text"
+                            value={editFormData.username}
+                            onChange={(e) => setEditFormData({...editFormData, username: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="Enter your username"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Bio
+                          </label>
+                          <textarea
+                            value={editFormData.bio}
+                            onChange={(e) => setEditFormData({...editFormData, bio: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="Tell us about yourself"
+                            rows="3"
+                          />
+                        </div>
+                        
+                        {user.role?.name === "seller" && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Shop Name
+                            </label>
+                            <input
+                              type="text"
+                              value={editFormData.shopName}
+                              onChange={(e) => setEditFormData({...editFormData, shopName: e.target.value})}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                              placeholder="Enter your shop name"
+                            />
+                          </div>
+                        )}
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Old Password
+                          </label>
+                          <input
+                            type="password"
+                            value={editFormData.oldPassword}
+                            onChange={(e) => setEditFormData({...editFormData, oldPassword: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="Enter old password"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            New Password
+                          </label>
+                          <input
+                            type="password"
+                            value={editFormData.newPassword}
+                            onChange={(e) => setEditFormData({...editFormData, newPassword: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="Enter new password"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Confirm New Password
+                          </label>
+                          <input
+                            type="password"
+                            value={editFormData.confirmPassword}
+                            onChange={(e) => setEditFormData({...editFormData, confirmPassword: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="Confirm new password"
+                          />
+                        </div>
+                        
+                        {editError && (
+                          <div className="mt-4 bg-red-50 border-l-4 border-red-500 p-3 rounded-md">
+                            <div className="flex items-center">
+                              <ExclamationCircleIcon className="h-5 w-5 text-red-500 mr-3" />
+                              <p className="text-sm text-red-700">{editError}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-6 flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowEditProfileModal(false)}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </form>
+                  </Dialog.Panel>
+                </Transition.Child>
+              </div>
+            </div>
+          </Dialog>
+        </Transition>
       </div>
     </div>
   );

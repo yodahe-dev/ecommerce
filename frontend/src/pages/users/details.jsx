@@ -5,12 +5,12 @@ import { motion, LayoutGroup, useDragControls } from "framer-motion";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "react-toastify";
 
-import ProductActions from "../component/ProductActions";
-import ProductTabs from "../component/ProductTabs";
-import ImageGallery from "../component/ImageGallery";
+import ProductActions from "../component/detail/ProductActions";
+import ProductTabs from "../component/detail/ProductTabs";
+import ImageGallery from "../component/detail/ImageGallery";
 import ErrorState from "../component/ErrorState";
-import LoadingSkeleton from "../component/LoadingSkeleton";
-import PriceDisplay from "../component/PriceDisplay";
+import LoadingSkeleton from "../component/detail/LoadingSkeleton";
+import PriceDisplay from "../component/detail/PriceDisplay";
 
 const API = "http://localhost:5000/api";
 const BASE_URL = "http://localhost:5173";
@@ -48,7 +48,8 @@ export default function ProductDetail() {
       });
       setIsWishlisted(data.liked);
     } catch {
-      // ignore error here
+      alert("Failed to check wishlist status");
+      setIsWishlisted(false);
     }
   }, [id]);
 

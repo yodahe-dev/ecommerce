@@ -14,6 +14,8 @@ import About from "./pages/users/About";
 import Contact from "./pages/users/contact";
 import ProductDetail from "./pages/users/details";
 import Checkout from "./pages/users/Checkout";
+import ErrorState from "./pages/component/ErrorState";
+import Search from "./pages/users/Search";
 
 function App() {
   const [token, setToken] = useState("");
@@ -103,7 +105,7 @@ function App() {
   if (hasError) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
-        <p>Something went wrong. Please refresh the page.</p>
+        <ErrorState/>
       </div>
     );
   }
@@ -141,6 +143,8 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/products" element={<Catagory />} />
           <Route path="/about" element={<About />} />
+          <Route path="/search" element={<Search />} />
+
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route
             path="/checkout/:id"

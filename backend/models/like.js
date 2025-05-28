@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: 'Users', // Ensure the Users model is properly defined
+        model: 'Users',
         key: 'id',
       },
     },
@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: 'Products', // Ensure the Products model is properly defined
+        model: 'Products',
         key: 'id',
       },
     },

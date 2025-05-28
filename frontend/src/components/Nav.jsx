@@ -403,7 +403,7 @@ function MobileNavLink({ to, label, darkMode }) {
         darkMode 
           ? "text-gray-300 hover:bg-gray-700 hover:text-white" 
           : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-      } transition-colors`}
+      } transition-colors`}cl
     >
       {label}
     </Link>

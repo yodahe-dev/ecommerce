@@ -62,8 +62,8 @@ router.post("/rating", upload.single("image"), async (req, res) => {
 
     if (existing) {
       const oldFeedback = existing.feedback ? existing.feedback.trim() : "";
-      const newFeedbackText = feedback ? feedback.trim() : "(updated the rating)";
-      const combinedFeedback = `[${newFeedbackText}]\n${oldFeedback ? `[${oldFeedback}]` : ""}`;
+      const newFeedbackText = feedback ? feedback.trim() : "";
+      const combinedFeedback = `${newFeedbackText}\n${oldFeedback ? `${oldFeedback}` : ""}`;
 
       existing.rating = ratingValue;
       existing.feedback = combinedFeedback;
@@ -77,7 +77,7 @@ router.post("/rating", upload.single("image"), async (req, res) => {
       return res.status(200).json({ message: "Rating updated successfully" });
     }
 
-    const initialFeedback = feedback ? `[${feedback.trim()}]` : null;
+    const initialFeedback = feedback ? `${feedback.trim()}` : null;
 
     const newRating = await Rating.create({
       userId,
@@ -95,6 +95,42 @@ router.post("/rating", upload.single("image"), async (req, res) => {
       return res.status(413).json({ message: "Image too large. Max size is 2MB." });
     }
 
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// GET /api/rating/:productId
+router.get("/rating/:productId", async (req, res) => {
+  const { productId } = req.params;
+
+  try {
+    const ratings = await Rating.findAll({
+      where: { productId },
+      attributes: ["rating", "feedback", "imageUrl", "createdAt"],
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!ratings || ratings.length === 0) {
+      return res.status(200).json({
+        productId,
+        averageRating: 0,
+        totalRatings: 0,
+        reviews: [],
+      });
+    }
+
+    const total = ratings.length;
+    const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+    const average = (sum / total).toFixed(2);
+
+    return res.status(200).json({
+      productId,
+      averageRating: parseFloat(average),
+      totalRatings: total,
+      reviews: ratings,
+    });
+  } catch (error) {
+    console.error("Error fetching ratings:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });

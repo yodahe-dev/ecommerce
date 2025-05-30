@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 1, // Default to 1 if no quantity is specified
+      defaultValue: 1,
       validate: {
         min: 1,
       },
@@ -37,16 +37,24 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
+    categoryId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Categories',
+        key: 'id',
+      },
+    },
     mainImage: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     extraImages: {
-      type: DataTypes.JSON, // array of image URLs
+      type: DataTypes.JSON,
       allowNull: true,
     },
     sizes: {
-      type: DataTypes.JSON, // array or object, like ['S','M','L'] or {M: 10, L: 4}
+      type: DataTypes.JSON,
       allowNull: true,
     },
     shippingPrice: {
@@ -54,17 +62,23 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     condition: {
-      type: DataTypes.ENUM('new', 'used', 'refurbished', 'other'),
-      defaultValue: 'new',
-    },
+      type: DataTypes.ENUM('new', 'used', 'other'),
+      allowNull: true,
+    }
+
   }, {
-    timestamps: true, // <-- this fixes your error
+    timestamps: true,
   });
 
   Product.associate = (models) => {
     Product.belongsTo(models.User, {
       foreignKey: 'userId',
       as: 'user',
+    });
+
+    Product.belongsTo(models.Category, {
+      foreignKey: 'categoryId',
+      as: 'category',
     });
   };
 

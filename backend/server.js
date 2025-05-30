@@ -4,12 +4,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { sequelize } = require('./models');
 const authRoutes = require('./routes/auth');
-const productRoutes = require('./routes/product'); // Import product routes
+const productRoutes = require('./routes/product');
 const cartRoutes = require("./routes/Cart");
 const paymentRoutes = require("./routes/payment");
 const  likeProduct = require('./routes/like');
-const ratingRoutes = require('./routes/rating'); // Import rating routes
-const orderRoutes = require('./routes/order'); // Import order routes
+const ratingRoutes = require('./routes/rating');
+const orderRoutes = require('./routes/order');
+const categoryRoutes = require('./routes/category');
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use("/api", paymentRoutes);
 app.use("/api", likeProduct);
 app.use("/api", ratingRoutes);
 app.use('/api', orderRoutes); 
-
+app.use('/api', categoryRoutes);
 
 
 const PORT = process.env.PORT || 5000;

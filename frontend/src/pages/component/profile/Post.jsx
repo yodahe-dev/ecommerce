@@ -1,3 +1,4 @@
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, Fragment, useRef } from 'react';
 import axios from 'axios';
 import { Dialog, Transition } from '@headlessui/react';
@@ -139,7 +140,7 @@ export default function SellerProfile() {
   if (!seller && loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
   }
@@ -147,7 +148,7 @@ export default function SellerProfile() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Store Header */}
-      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 mb-8">
+      <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 mb-8">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -158,9 +159,18 @@ export default function SellerProfile() {
             </p>
           </div>
           <div className="mt-4 md:mt-0">
-            <button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl">
-              Add New Product
-            </button>
+
+
+           <Link to="/upload">
+  <button
+    className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600
+               text-white font-medium py-2 px-6 rounded-lg transition-all duration-300
+               transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
+  >
+    Add New Product
+  </button>
+</Link>
+
           </div>
         </div>
       </div>
@@ -171,7 +181,7 @@ export default function SellerProfile() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Your Products
           </h2>
-          <span className="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded-full dark:bg-indigo-900 dark:text-indigo-100">
+          <span className="bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-0.5 rounded-full dark:bg-orange-900 dark:text-orange-100">
             {products.length} items
           </span>
         </div>
@@ -205,7 +215,7 @@ export default function SellerProfile() {
               <p className="text-gray-500 dark:text-gray-400 mb-6">
                 Get started by adding your first product to your store
               </p>
-              <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+              <button className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
                 Add Product
               </button>
             </div>
@@ -247,7 +257,7 @@ export default function SellerProfile() {
                   
                   <div className="flex justify-between items-center mt-4">
                     <div>
-                      <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{product.price} ETB</span>
+                      <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{product.price} ETB</span>
                       <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">/ each</span>
                     </div>
                     <div className="text-sm bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
@@ -259,7 +269,7 @@ export default function SellerProfile() {
                   <div className="flex space-x-3 mt-4">
                     <button
                       onClick={() => openEdit(product)}
-                      className="flex-1 inline-flex items-center justify-center bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition-colors dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                      className="flex-1 inline-flex items-center justify-center bg-white border border-orange-300 text-orange-700 hover:bg-orange-50 font-medium py-2 px-4 rounded-lg transition-colors dark:bg-gray-800 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900/20"
                     >
                       <PencilIcon className="h-4 w-4 mr-2" />
                       Edit
@@ -354,7 +364,7 @@ export default function SellerProfile() {
                               <div className="mt-4 flex text-sm leading-6 text-gray-600 dark:text-gray-400">
                                 <label
                                   htmlFor="file-upload"
-                                  className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
+                                  className="relative cursor-pointer rounded-md bg-white font-semibold text-orange-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-600 focus-within:ring-offset-2 hover:text-orange-500"
                                 >
                                   <span>Upload an image</span>
                                   <input
@@ -387,7 +397,7 @@ export default function SellerProfile() {
                         id="name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         placeholder="Enter product name"
                       />
                     </div>
@@ -401,7 +411,7 @@ export default function SellerProfile() {
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         rows="3"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         placeholder="Enter product description"
                       />
                     </div>
@@ -416,7 +426,7 @@ export default function SellerProfile() {
                           id="price"
                           value={formData.price}
                           onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           placeholder="0.00"
                           step="0.01"
                         />
@@ -431,7 +441,7 @@ export default function SellerProfile() {
                           id="quantity"
                           value={formData.quantity}
                           onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           placeholder="0"
                         />
                       </div>
@@ -450,14 +460,14 @@ export default function SellerProfile() {
                   <div className="mt-6 flex justify-end space-x-3">
                     <button
                       type="button"
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
                       onClick={closeEdit}
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
-                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
                       onClick={handleUpdate}
                     >
                       Save Changes

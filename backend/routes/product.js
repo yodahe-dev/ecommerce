@@ -1,12 +1,12 @@
 const express = require('express');
-const { Product, User, Role } = require('../models');
+const { Product, User, Role, Category } = require('../models');
 const validator = require('validator');
 const upload = require('../middlewares/upload');
 const { Op, fn, col, where: whereFn } = require('sequelize');
 
 const router = express.Router();
 
-// helpers
+// helper to format product
 const formatProduct = (product) => ({
   id: product.id,
   name: product.name,
@@ -14,12 +14,17 @@ const formatProduct = (product) => ({
   price: product.price,
   lastPrice: product.lastPrice,
   imageUrl: product.mainImage,
+  extraImages: product.extraImages,
+  specs: product.sizes,
+  shippingPrice: product.shippingPrice,
+  condition: product.condition,
   createdAt: product.createdAt,
   updatedAt: product.updatedAt,
   seller: {
     username: product.user?.username,
     email: product.user?.email,
   },
+  categoryId: product.categoryId
 });
 
 // create
@@ -32,8 +37,8 @@ router.post('/products', upload, async (req, res) => {
     userId,
     sizes,
     quantity,
-    shippingPrice,
     condition,
+    categoryId  // Added categoryId
   } = req.body;
 
   if (!userId) return res.status(400).json({ message: 'User must log in' });
@@ -45,20 +50,26 @@ router.post('/products', upload, async (req, res) => {
     return res.status(400).json({ message: 'Invalid product description' });
 
   const parsedPrice = parseFloat(price);
-  const parsedQuantity = parseFloat(quantity);
-  const parsedLastPrice = parseFloat(lastPrice);
-  const parsedShippingPrice = parseFloat(shippingPrice);
+  const parsedQuantity = parseInt(quantity, 10); // Changed to integer
+  const parsedLastPrice = lastPrice ? parseFloat(lastPrice) : null;
 
-  if (isNaN(parsedPrice) || parsedPrice < 0)
+  if (isNaN(parsedPrice) || parsedPrice <= 0)  // Changed to <= 0
     return res.status(400).json({ message: 'Invalid price' });
-  if (isNaN(parsedQuantity) || parsedQuantity < 0)
+  if (isNaN(parsedQuantity) || parsedQuantity <= 0)
     return res.status(400).json({ message: 'Invalid quantity' });
-  if (!isNaN(parsedLastPrice) && parsedLastPrice < 0)
+  if (parsedLastPrice !== null && isNaN(parsedLastPrice))
     return res.status(400).json({ message: 'Invalid last price' });
-  if (!isNaN(parsedShippingPrice) && parsedShippingPrice < 0)
-    return res.status(400).json({ message: 'Invalid shipping price' });
-
+    
+  // Validate categoryId
+  if (!categoryId) 
+    return res.status(400).json({ message: 'Category is required' });
+  
   try {
+    // Verify category exists
+    const category = await Category.findByPk(categoryId);
+    if (!category) 
+      return res.status(400).json({ message: 'Invalid category' });
+
     const user = await User.findOne({
       where: { id: userId },
       include: [{ model: Role, as: 'role', attributes: ['name'] }],
@@ -78,13 +89,14 @@ router.post('/products', upload, async (req, res) => {
       description: validator.escape(description.trim()),
       price: parsedPrice,
       quantity: parsedQuantity,
-      lastPrice: !isNaN(parsedLastPrice) ? parsedLastPrice : null,
+      lastPrice: parsedLastPrice,
       mainImage: `/src/assets/products/${mainImage}`,
       extraImages: extraImages.map((f) => `/src/assets/products/${f}`),
       userId,
       sizes: sizes ? JSON.parse(sizes) : null,
-      shippingPrice: !isNaN(parsedShippingPrice) ? parsedShippingPrice : 100,
-      condition,
+      shippingPrice: 200, // fixed shipping price
+      condition: condition || 'other',  // Default to 'other'
+      categoryId  // Added categoryId
     });
 
     res.status(201).json(product);
@@ -111,7 +123,10 @@ router.get('/products', async (req, res) => {
 
     const options = {
       where,
-      include: [{ model: User, as: 'user', attributes: ['username', 'email'] }],
+      include: [
+        { model: User, as: 'user', attributes: ['username', 'email'] },
+        { model: Category, as: 'category', attributes: ['id', 'name'] }  // Added category
+      ],
       order: [[sortBy, order.toUpperCase()]],
     };
 
@@ -131,28 +146,15 @@ router.get('/products/:id', async (req, res) => {
   try {
     const product = await Product.findOne({
       where: { id: req.params.id },
-      include: [{ model: User, as: 'user', attributes: ['username', 'email'] }],
+      include: [
+        { model: User, as: 'user', attributes: ['username', 'email'] },
+        { model: Category, as: 'category', attributes: ['id', 'name'] }  // Added category
+      ],
     });
 
     if (!product) return res.status(404).json({ message: 'Product not found' });
 
-    res.json({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      lastPrice: product.lastPrice,
-      imageUrl: product.mainImage,
-      extraImages: product.extraImages,
-      specs: product.sizes,
-      shippingPrice: product.shippingPrice,
-      condition: product.condition,
-      createdAt: product.createdAt,
-      seller: {
-        username: product.user?.username,
-        email: product.user?.email,
-      },
-    });
+    res.json(formatProduct(product));
   } catch (err) {
     console.error('Error fetching product by ID:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -172,6 +174,7 @@ router.get('/products/seller/:sellerId', async (req, res) => {
 
     const products = await Product.findAll({
       where: { userId: req.params.sellerId },
+      include: [{ model: Category, as: 'category', attributes: ['id', 'name'] }],  // Added category
       order: [['createdAt', 'DESC']],
     });
 
@@ -193,7 +196,18 @@ router.get('/products/seller/:sellerId', async (req, res) => {
 
 // update
 router.put('/products/:id', async (req, res) => {
-  const { name, description, price, quantity } = req.body;
+  const {
+    name,
+    description,
+    price,
+    quantity,
+    lastPrice,
+    sizes,
+    condition,
+    mainImage,
+    extraImages,
+    categoryId  // Added categoryId
+  } = req.body;
   const id = req.params.id;
 
   if (!name || typeof name !== 'string' || name.length > 100)
@@ -206,12 +220,30 @@ router.put('/products/:id', async (req, res) => {
     const product = await Product.findByPk(id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
 
+    // Validate category if provided
+    if (categoryId) {
+      const category = await Category.findByPk(categoryId);
+      if (!category) 
+        return res.status(400).json({ message: 'Invalid category' });
+    }
+
     product.name = name;
     product.description = description;
     product.price = price;
     product.quantity = quantity;
+    product.lastPrice = lastPrice;
+    product.sizes = sizes;
+    product.condition = condition || 'other';
+    
+    // Update categoryId if provided
+    if (categoryId) product.categoryId = categoryId;
+
+    // optional: update images
+    if (mainImage) product.mainImage = mainImage;
+    if (extraImages) product.extraImages = extraImages;
 
     await product.save();
+
     res.status(200).json({ message: 'Product updated', product });
   } catch (err) {
     console.error('Update error:', err);

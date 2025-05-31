@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'ETB',
     },
     rawResponse: {
-      type: DataTypes.JSON, // ✅ fixed here
+      type: DataTypes.JSON,
       allowNull: true,
     },
   });

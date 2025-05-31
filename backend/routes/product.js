@@ -6,7 +6,6 @@ const { Op, fn, col, where: whereFn } = require('sequelize');
 
 const router = express.Router();
 
-// helper to format product
 const formatProduct = (product) => ({
   id: product.id,
   name: product.name,
@@ -24,85 +23,79 @@ const formatProduct = (product) => ({
     username: product.user?.username,
     email: product.user?.email,
   },
-  categoryId: product.categoryId
+  categoryId: product.categoryId,
+  rating: product.rating || 4.5,
+  isFeatured: product.isFeatured || false
 });
 
-// create
-router.post('/products', upload, async (req, res) => {
-  const {
-    name,
-    description,
-    price,
-    lastPrice,
-    userId,
-    sizes,
-    quantity,
-    condition,
-    categoryId  // Added categoryId
-  } = req.body;
-
-  if (!userId) return res.status(400).json({ message: 'User must log in' });
-
-  if (!name || typeof name !== 'string' || name.length > 100)
-    return res.status(400).json({ message: 'Invalid product title' });
-
-  if (!description || typeof description !== 'string' || description.length > 2000)
-    return res.status(400).json({ message: 'Invalid product description' });
-
-  const parsedPrice = parseFloat(price);
-  const parsedQuantity = parseInt(quantity, 10); // Changed to integer
-  const parsedLastPrice = lastPrice ? parseFloat(lastPrice) : null;
-
-  if (isNaN(parsedPrice) || parsedPrice <= 0)  // Changed to <= 0
-    return res.status(400).json({ message: 'Invalid price' });
-  if (isNaN(parsedQuantity) || parsedQuantity <= 0)
-    return res.status(400).json({ message: 'Invalid quantity' });
-  if (parsedLastPrice !== null && isNaN(parsedLastPrice))
-    return res.status(400).json({ message: 'Invalid last price' });
-    
-  // Validate categoryId
-  if (!categoryId) 
-    return res.status(400).json({ message: 'Category is required' });
-  
+router.get('/products', async (req, res) => {
   try {
-    // Verify category exists
-    const category = await Category.findByPk(categoryId);
-    if (!category) 
-      return res.status(400).json({ message: 'Invalid category' });
+    const { 
+      search = '', 
+      sortBy = 'createdAt', 
+      order = 'DESC', 
+      limit, 
+      offset,
+      condition,
+      categoryId,
+      minPrice,
+      maxPrice,
+      featured,
+      trending
+    } = req.query;
 
-    const user = await User.findOne({
-      where: { id: userId },
-      include: [{ model: Role, as: 'role', attributes: ['name'] }],
-    });
+    const where = {};
 
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (search.trim() !== '') {
+      where[Op.or] = [
+        whereFn(fn('LOWER', col('Product.name')), { [Op.like]: `%${search.toLowerCase()}%` }),
+        whereFn(fn('LOWER', col('Product.description')), { [Op.like]: `%${search.toLowerCase()}%` }),
+      ];
+    }
 
-    const allowedRoles = ['seller', 'admin', 'manager'];
-    if (!allowedRoles.includes(user.role?.name))
-      return res.status(403).json({ message: 'Not allowed to create products' });
+    if (condition && condition !== 'all') {
+      where.condition = condition;
+    }
 
-    const mainImage = req.files?.main?.[0]?.filename || '';
-    const extraImages = req.files?.extra?.map((file) => file.filename) || [];
+    if (categoryId && categoryId !== 'all') {
+      where.categoryId = categoryId;
+    }
 
-    const product = await Product.create({
-      name: validator.escape(name.trim()),
-      description: validator.escape(description.trim()),
-      price: parsedPrice,
-      quantity: parsedQuantity,
-      lastPrice: parsedLastPrice,
-      mainImage: `/src/assets/products/${mainImage}`,
-      extraImages: extraImages.map((f) => `/src/assets/products/${f}`),
-      userId,
-      sizes: sizes ? JSON.parse(sizes) : null,
-      shippingPrice: 200, // fixed shipping price
-      condition: condition || 'other',  // Default to 'other'
-      categoryId  // Added categoryId
-    });
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      where.price = {};
+      if (minPrice !== undefined) {
+        where.price[Op.gte] = minPrice;
+      }
+      if (maxPrice !== undefined) {
+        where.price[Op.lte] = maxPrice;
+      }
+    }
 
-    res.status(201).json(product);
+    if (featured === 'true') {
+      where.isFeatured = true;
+    }
+
+    if (trending === 'true') {
+      where.isTrending = true;
+    }
+
+    const options = {
+      where,
+      include: [
+        { model: User, as: 'user', attributes: ['username', 'email'] },
+        { model: Category, as: 'category', attributes: ['id', 'name'] }
+      ],
+      order: [[sortBy, order.toUpperCase()]],
+    };
+
+    if (limit) options.limit = parseInt(limit);
+    if (offset) options.offset = parseInt(offset);
+
+    const products = await Product.findAll(options);
+    res.json(products.map(formatProduct));
   } catch (err) {
-    console.error('Create product failed:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error fetching products:', err);
+    res.status(500).json({ message: 'Failed to fetch products' });
   }
 });
 

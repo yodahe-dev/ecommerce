@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { motion, LayoutGroup, useDragControls } from "framer-motion";
+import { motion, LayoutGroup } from "framer-motion";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "react-toastify";
 
@@ -22,8 +22,12 @@ export default function ProductDetail() {
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const dragControls = useDragControls();
+  const [soldCount, setSoldCount] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [totalWish, setTotalWish] = useState(0);
   const [activeTab, setActiveTab] = useState("details");
+  const [reviewLoading, setReviewLoading] = useState(true);
 
   useHotkeys("esc", () => navigate(-1));
 
@@ -38,25 +42,77 @@ export default function ProductDetail() {
     }
   }, [id]);
 
+  const fetchSoldCount = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/product/${id}/sold-count`);
+      setSoldCount(data.soldCount || 0);
+    } catch {
+      setSoldCount(0);
+    }
+  }, [id]);
+
+  // Unified review fetching function
+  const fetchReviewData = useCallback(async () => {
+    setReviewLoading(true);
+    try {
+      // Get full reviews
+      const reviewsResponse = await axios.get(`${API}/rating/${id}`);
+      setReviews(reviewsResponse.data.reviews || []);
+      setTotalReviews(reviewsResponse.data.totalRatings || 0);
+    } catch (error) {
+      console.error("Failed to load reviews:", error);
+      toast.error("Failed to load reviews");
+      setReviews([]);
+      setTotalReviews(0);
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [id]);
+
   const checkIfLiked = useCallback(async () => {
     try {
       const userId = localStorage.getItem("user_id");
-      if (!userId) return;
+      if (!userId) return setIsWishlisted(false);
+      
       const { data } = await axios.post(`${API}/isLiked`, {
         userId,
         productId: id,
       });
       setIsWishlisted(data.liked);
     } catch {
-      alert("Failed to check wishlist status");
       setIsWishlisted(false);
     }
   }, [id]);
 
+  const fetchTotalLikes = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/totalLike/${id}`);
+      setTotalWish(data.totalLikes || 0);
+    } catch {
+      setTotalWish(0);
+    }
+  }, [id]);
+
   useEffect(() => {
-    fetchProduct();
-    checkIfLiked();
-  }, [fetchProduct, checkIfLiked]);
+    const fetchData = async () => {
+      await Promise.allSettled([
+        fetchProduct(),
+        fetchTotalLikes(),
+        fetchSoldCount(),
+        fetchReviewData(),
+      ]);
+      await checkIfLiked();
+    };
+
+    fetchData();
+  }, [
+    id,
+    fetchProduct,
+    fetchTotalLikes,
+    fetchSoldCount,
+    fetchReviewData,
+    checkIfLiked
+  ]);
 
   const parsedExtraImages = useMemo(() => {
     if (!product) return [];
@@ -64,6 +120,7 @@ export default function ProductDetail() {
       const imagesArray = Array.isArray(product.extraImages)
         ? product.extraImages
         : JSON.parse(product.extraImages || "[]");
+      
       return imagesArray.map((img) =>
         img.startsWith("http") ? img : `${BASE_URL}${img}`
       );
@@ -96,16 +153,14 @@ export default function ProductDetail() {
   );
 
   const handleDrag = useCallback(
-    (event, info) => {
+    (_, info) => {
       if (info.offset.x > 50) handleImageNavigation("prev");
       if (info.offset.x < -50) handleImageNavigation("next");
     },
     [handleImageNavigation]
   );
 
-  const handleBuyNow = () => {
-    navigate(`/checkout/${id}`);
-  };
+  const handleBuyNow = () => navigate(`/checkout/${id}`);
 
   const toggleWishlists = async () => {
     try {
@@ -114,25 +169,17 @@ export default function ProductDetail() {
         toast.error("Please login first");
         return;
       }
+
       const url = isWishlisted ? `${API}/unlike` : `${API}/like`;
+      const { data } = await axios.post(url, { userId, productId: id });
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, productId: id }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        toast.error(err.message || "Something went wrong");
-      } else {
-        setIsWishlisted(!isWishlisted);
-        toast.success(
-          isWishlisted ? "Removed from wishlist" : "Added to wishlist"
-        );
-      }
+      setIsWishlisted(!isWishlisted);
+      setTotalWish(data.totalLikes);
+      toast.success(
+        isWishlisted ? "Removed from wishlist" : "Added to wishlist"
+      );
     } catch (error) {
-      toast.error("Server error");
+      toast.error(error.response?.data?.message || "Server error");
     }
   };
 
@@ -152,21 +199,17 @@ export default function ProductDetail() {
     >
       <LayoutGroup>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Gallery Section */}
           <ImageGallery
             images={images}
             selectedImage={selectedImage}
             setSelectedImage={setSelectedImage}
-            dragControls={dragControls}
             handleDrag={handleDrag}
             handleImageNavigation={handleImageNavigation}
             productName={product.name}
           />
 
-          {/* Details Section */}
           <div className="space-y-6">
             <h1 className="text-3xl font-semibold">{product.name}</h1>
-
             <PriceDisplay price={product.price} lastPrice={product.lastPrice} />
 
             <ProductActions
@@ -174,7 +217,10 @@ export default function ProductDetail() {
               toggleWishlists={toggleWishlists}
               shareProduct={shareProduct}
               handleBuyNow={handleBuyNow}
-              totalWishlist={10} // Update if you have real data
+              totalWish={totalWish}
+              totalSold={soldCount}
+              totalReviews={totalReviews}
+              productId={id}
             />
 
             <ProductTabs
@@ -182,6 +228,9 @@ export default function ProductDetail() {
               setActiveTab={setActiveTab}
               product={product}
               productId={id}
+              reviews={reviews}
+              totalReviews={totalReviews}
+              reviewLoading={reviewLoading}
             />
           </div>
         </div>

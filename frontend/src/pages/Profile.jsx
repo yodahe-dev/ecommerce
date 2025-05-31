@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { FaUserCircle, FaSpinner, FaCopy, FaStar } from "react-icons/fa";
 import { 
   MdDarkMode, 
@@ -19,7 +19,6 @@ const API = "http://localhost:5000/api";
 
 export default function Profile({ token, darkMode, setDarkMode }) {
   const [user, setUser] = useState(null);
-  const [tab, setTab] = useState("orders");
   const [orderTab, setOrderTab] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,6 +41,18 @@ export default function Profile({ token, darkMode, setDarkMode }) {
   const [editError, setEditError] = useState("");
   const avatarInputRef = useRef(null);
   const navigate = useNavigate();
+  const [tab, setTab] = useState("orders");
+
+useEffect(() => {
+  if (user) {
+    if (user.role?.name === "seller") {
+      setTab("posts");
+    } else {
+      setTab("orders");
+    }
+  }
+}, [user]);
+
 
   useEffect(() => {
     if (!token) {

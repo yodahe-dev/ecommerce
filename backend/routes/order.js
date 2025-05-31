@@ -81,6 +81,33 @@ router.post('/orders/confirm/:orderId', auth, async (req, res) => {
   }
 });
 
+// Fixed sold count endpoint - using uppercase Order model
+router.get("/product/:productId/sold-count", async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const soldCount = await Order.count({
+      where: {
+        productId,
+      }
+    });
+
+    res.json({
+      code: "SOLD_COUNT_FOUND",
+      message: "Sold count retrieved",
+      productId,
+      soldCount
+    });
+  } catch (error) {
+    console.error("Error fetching sold count:", error);
+    res.status(500).json({
+      code: "SERVER_ERROR",
+      message: "Internal server error"
+    });
+  }
+});
+
+
 
 
 

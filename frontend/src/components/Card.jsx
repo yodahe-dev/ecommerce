@@ -11,34 +11,95 @@ export default function Card() {
   const [hoveredProduct, setHoveredProduct] = useState(null);
   const [sortOption, setSortOption] = useState("featured");
   const [filterOption, setFilterOption] = useState("all");
+  const [categories, setCategories] = useState([]);
+  const [ratings, setRatings] = useState({});
+  const [soldCounts, setSoldCounts] = useState({});
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const currentUserId = localStorage.getItem("user_id");
 
+  // Fetch all products
   useEffect(() => {
-    axios
-      .get(`${API}/products`)
-      .then(res => setProducts(res.data))
-      .catch(err => console.error("Error fetching products:", err));
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch products
+        const productsRes = await axios.get(`${API}/products`);
+        setProducts(productsRes.data);
+        
+        // Fetch categories
+        const categoriesRes = await axios.get(`${API}/categories`);
+        setCategories(categoriesRes.data);
+        
+        // Fetch ratings and sold counts for each product
+        const productIds = productsRes.data.map(p => p.id);
+        
+        // Fetch ratings
+        const ratingsData = {};
+        await Promise.all(productIds.map(async id => {
+          try {
+            const ratingRes = await axios.get(`${API}/rating/${id}`);
+            ratingsData[id] = {
+              average: ratingRes.data.averageRating || 0,
+              count: ratingRes.data.totalRatings || 0
+            };
+          } catch (err) {
+            ratingsData[id] = { average: 0, count: 0 };
+          }
+        }));
+        setRatings(ratingsData);
+        
+        // Fetch sold counts
+        const soldCountsData = {};
+        await Promise.all(productIds.map(async id => {
+          try {
+            const soldRes = await axios.get(`${API}/product/${id}/sold-count`);
+            soldCountsData[id] = soldRes.data.soldCount || 0;
+          } catch (err) {
+            soldCountsData[id] = 0;
+          }
+        }));
+        setSoldCounts(soldCountsData);
+        
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
+  // Check like status for each product
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || products.length === 0) return;
 
-    products.forEach(product => {
-      axios
-        .post(`${API}/isLiked`, {
-          userId: currentUserId,
-          productId: product.id,
-        })
-        .then(res => {
-          setLikedProducts(prev => ({
-            ...prev,
-            [product.id]: res.data.liked,
-          }));
-        })
-        .catch(err => console.error("Error checking like status:", err));
-    });
+    const checkLikes = async () => {
+      try {
+        const likeStatus = await Promise.all(
+          products.map(product => 
+            axios.post(`${API}/isLiked`, {
+              userId: currentUserId,
+              productId: product.id,
+            }).then(res => ({ id: product.id, liked: res.data.liked }))
+          )
+        );
+        
+        const newLikedProducts = likeStatus.reduce((acc, { id, liked }) => {
+          acc[id] = liked;
+          return acc;
+        }, {});
+        
+        setLikedProducts(newLikedProducts);
+      } catch (err) {
+        console.error("Error checking like status:", err);
+      }
+    };
+
+    checkLikes();
   }, [products, currentUserId]);
 
   const handleDetails = id => {
@@ -91,7 +152,7 @@ export default function Card() {
             Brand New
           </span>
         );
-      case "old":
+      case "used":
         return (
           <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
             Pre-Owned
@@ -102,8 +163,11 @@ export default function Card() {
     }
   };
 
-  const getCategoryLabel = category => {
-    switch (category?.toLowerCase()) {
+  const getCategoryLabel = categoryId => {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return "bg-gray-100 text-gray-800";
+    
+    switch (category.name?.toLowerCase()) {
       case "electronics":
         return "bg-blue-100 text-blue-800";
       case "fashion":
@@ -117,18 +181,70 @@ export default function Card() {
     }
   };
 
+  const getCategoryName = categoryId => {
+    const category = categories.find(c => c.id === categoryId);
+    return category ? category.name : "General";
+  };
+
   // Sort and filter products
   const sortedAndFilteredProducts = [...products]
     .filter(product => {
       if (filterOption === "all") return true;
-      return product.category?.toLowerCase() === filterOption;
+      return product.categoryId === filterOption;
     })
     .sort((a, b) => {
       if (sortOption === "price-low") return a.price - b.price;
       if (sortOption === "price-high") return b.price - a.price;
-      if (sortOption === "popular") return b.sold - a.sold;
+      if (sortOption === "popular") return (soldCounts[b.id] || 0) - (soldCounts[a.id] || 0);
       return 0;
     });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-600 mb-3">
+              Premium Collection
+            </h1>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 mx-auto"></div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div className="flex flex-wrap gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded-full w-24"></div>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-full w-32"></div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="relative group">
+                <div className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-xl h-full flex flex-col">
+                  <div className="h-60 bg-gray-200 dark:bg-gray-700 rounded-t-3xl"></div>
+                  <div className="p-5 flex flex-col flex-grow">
+                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-3/4 mb-4"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-5/6"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-1/2"></div>
+                    <div className="mt-auto pt-4">
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6">
@@ -152,24 +268,15 @@ export default function Card() {
             >
               All Products
             </button>
-            <button 
-              onClick={() => setFilterOption("electronics")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filterOption === "electronics" ? "bg-blue-500 text-white shadow-lg" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
-            >
-              Electronics
-            </button>
-            <button 
-              onClick={() => setFilterOption("fashion")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filterOption === "fashion" ? "bg-pink-500 text-white shadow-lg" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
-            >
-              Fashion
-            </button>
-            <button 
-              onClick={() => setFilterOption("home")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filterOption === "home" ? "bg-purple-500 text-white shadow-lg" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
-            >
-              Home & Kitchen
-            </button>
+            {categories.map(category => (
+              <button 
+                key={category.id}
+                onClick={() => setFilterOption(category.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filterOption === category.id ? "bg-blue-500 text-white shadow-lg" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+              >
+                {category.name}
+              </button>
+            ))}
           </div>
           
           <div className="flex items-center gap-3">
@@ -193,6 +300,9 @@ export default function Card() {
             const discount = getDiscountPercentage(product.lastPrice, product.price);
             const liked = likedProducts[product.id];
             const isHovered = hoveredProduct === product.id;
+            const rating = ratings[product.id]?.average || 0;
+            const ratingCount = ratings[product.id]?.count || 0;
+            const soldCount = soldCounts[product.id] || 0;
 
             return (
               <div
@@ -212,7 +322,7 @@ export default function Card() {
                         {discount} OFF
                       </div>
                     )}
-                    {product.sold > 50 && (
+                    {soldCount > 50 && (
                       <div className="bg-gradient-to-r from-amber-500 to-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
                         <FaFire className="text-yellow-300" />
                         <span>Hot Deal</span>
@@ -269,8 +379,8 @@ export default function Card() {
                   
                   {/* Product Info */}
                   <div className="p-5 flex flex-col flex-grow">
-                    <div className={`inline-block ${getCategoryLabel(product.category)} text-xs font-medium px-2.5 py-0.5 rounded-full mb-2`}>
-                      {product.category || "Uncategorized"}
+                    <div className={`inline-block ${getCategoryLabel(product.categoryId)} text-xs font-medium px-2.5 py-0.5 rounded-full mb-2`}>
+                      {getCategoryName(product.categoryId)}
                     </div>
                     
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-1 mb-1">
@@ -285,15 +395,23 @@ export default function Card() {
                       <div className="flex items-center">
                         <div className="flex text-yellow-400">
                           {[...Array(5)].map((_, i) => (
-                            <FaStar key={i} size={14} className={i < 4 ? "fill-current" : "text-gray-300 dark:text-gray-600"} />
+                            <FaStar 
+                              key={i} 
+                              size={14} 
+                              className={i < Math.floor(rating) ? "fill-current" : "text-gray-300 dark:text-gray-600"} 
+                            />
                           ))}
                         </div>
-                        <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(24)</span>
+                        <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({ratingCount})</span>
                       </div>
                       
                       <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">In Stock</span>
+                        <div className={`w-2 h-2 rounded-full ${
+                          product.stock > 0 ? "bg-green-500" : "bg-red-500"
+                        }`}></div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {product.stock > 0 ? "In Stock" : ""}
+                        </span>
                       </div>
                     </div>
                     
@@ -301,21 +419,21 @@ export default function Card() {
                       {product.lastPrice ? (
                         <div className="flex flex-col">
                           <span className="text-orange-500 font-bold text-lg">
-                            {product.price} ETB
+                            {product.price.toLocaleString()} ETB
                           </span>
                           <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                            {product.lastPrice} ETB
+                            {product.lastPrice.toLocaleString()} ETB
                           </span>
                         </div>
                       ) : (
                         <p className="text-orange-500 font-bold text-lg">
-                          {product.price} ETB
+                          {product.price.toLocaleString()} ETB
                         </p>
                       )}
                       
                       <div className="bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-full px-3 py-1">
                         <span className="text-xs font-medium text-orange-700 dark:text-amber-300">
-                          {product.sold || 0} sold
+                          {soldCount} sold
                         </span>
                       </div>
                     </div>

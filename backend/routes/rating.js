@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require("path");
 const crypto = require("crypto");
 const multer = require("multer");
-const { Rating, User } = require("../models");
+const { Rating, User, Order } = require("../models");
 
 // Configuration constants
 const UPLOAD_CONFIG = {
@@ -80,7 +80,6 @@ router.post("/rating", upload.single("image"), async (req, res) => {
     });
 
     if (existingRating) {
-      // Update existing rating
       const updatedFeedback = [
         feedback?.trim(),
         existingRating.feedback?.trim()
@@ -149,7 +148,6 @@ router.post("/rating", upload.single("image"), async (req, res) => {
   }
 });
 
-// Get ratings endpoint
 router.get("/rating/:productId", async (req, res) => {
   try {
     const { productId } = req.params;
@@ -165,21 +163,11 @@ router.get("/rating/:productId", async (req, res) => {
       order: [["createdAt", "DESC"]]
     });
 
-    if (!ratings.length) {
-      return res.json({
-        code: "NO_RATINGS",
-        message: "No ratings found for this product",
-        productId,
-        averageRating: 0,
-        totalRatings: 0,
-        reviews: []
-      });
-    }
-
     const totalRatings = ratings.length;
-    const averageRating = ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings;
+    const averageRating = totalRatings > 0 
+      ? ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
+      : 0;
 
-    // Format response with user name
     const formattedReviews = ratings.map(rating => ({
       ...rating.get({ plain: true }),
       user: {
@@ -188,17 +176,35 @@ router.get("/rating/:productId", async (req, res) => {
       }
     }));
 
+    // FIXED RESPONSE STRUCTURE
     res.json({
-      code: "RATINGS_FOUND",
-      message: `${totalRatings} ratings found`,
+      code: totalRatings > 0 ? "RATINGS_FOUND" : "NO_RATINGS",
+      message: totalRatings > 0 
+        ? `${totalRatings} ratings found` 
+        : "No ratings found for this product",
       productId,
       averageRating: Number(averageRating.toFixed(2)),
       totalRatings,
-      reviews: formattedReviews
+      reviews: formattedReviews  // Always return array
     });
 
   } catch (error) {
     console.error("Ratings fetch error:", error);
+    res.status(500).json({
+      code: "SERVER_ERROR",
+      message: "Internal server error"
+    });
+  }
+});
+
+// Review count endpoint
+router.get("/rating/:productId/count", async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const count = await Rating.count({ where: { productId } });
+    res.json({ totalReviews: count });
+  } catch (error) {
+    console.error("Review count error:", error);
     res.status(500).json({
       code: "SERVER_ERROR",
       message: "Internal server error"

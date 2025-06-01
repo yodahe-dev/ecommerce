@@ -216,6 +216,7 @@ const ProductActions = ({
   totalWish,
   totalSold,
   totalReviews,
+  averageRating,
   productId,
 }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -368,9 +369,10 @@ const ProductActions = ({
       </div>
 
       <div className="grid grid-cols-3 gap-4 text-center sm:flex sm:gap-6 sm:px-1">
-        <StatItem value={totalWish} label="Wish" icon="❤️" />
+        <StatItem value={totalWish} label="Wish" icon="❤️" />``
         <StatItem value={totalSold} label="Sold" icon="🛒" />
         <StatItem value={totalReviews} label="Reviews" icon="⭐" />
+        <StatItem value={averageRating.toFixed(1)} label="Avg Rating" icon="🌟" />
       </div>
     </div>
   );

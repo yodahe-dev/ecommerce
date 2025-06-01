@@ -28,6 +28,7 @@ export default function ProductDetail() {
   const [totalWish, setTotalWish] = useState(0);
   const [activeTab, setActiveTab] = useState("details");
   const [reviewLoading, setReviewLoading] = useState(true);
+  const [averageRating, setAverageRating] = useState(0);
 
   useHotkeys("esc", () => navigate(-1));
 
@@ -59,11 +60,13 @@ export default function ProductDetail() {
       const reviewsResponse = await axios.get(`${API}/rating/${id}`);
       setReviews(reviewsResponse.data.reviews || []);
       setTotalReviews(reviewsResponse.data.totalRatings || 0);
+      setAverageRating(reviewsResponse.data.averageRating || 0); // Set average rating here
     } catch (error) {
       console.error("Failed to load reviews:", error);
       toast.error("Failed to load reviews");
       setReviews([]);
       setTotalReviews(0);
+      setAverageRating(0);
     } finally {
       setReviewLoading(false);
     }
@@ -220,6 +223,7 @@ export default function ProductDetail() {
               totalWish={totalWish}
               totalSold={soldCount}
               totalReviews={totalReviews}
+              averageRating={averageRating}
               productId={id}
             />
 
@@ -231,6 +235,7 @@ export default function ProductDetail() {
               reviews={reviews}
               totalReviews={totalReviews}
               reviewLoading={reviewLoading}
+              averageRating={averageRating}
             />
           </div>
         </div>

@@ -57,7 +57,6 @@ router.post('/orders/confirm/:orderId', auth, async (req, res) => {
 });
 
 // POST /api/orders/refund/:orderId
-
 router.post('/orders/confirm/:orderId', auth, async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -106,9 +105,5 @@ router.get("/product/:productId/sold-count", async (req, res) => {
     });
   }
 });
-
-
-
-
 
 module.exports = router;

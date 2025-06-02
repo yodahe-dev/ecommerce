@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 
 const API = "http://localhost:5000/api";
 
@@ -18,10 +17,8 @@ function decimalToDMS(deg, type) {
 }
 
 const isValidPhone = (phone) => /^9\d{8}$/.test(phone);
-const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const Checkout = () => {
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -34,11 +31,8 @@ const Checkout = () => {
   const [productId, setProductId] = useState(null);
   const [product, setProduct] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [shippingPrice, setShippingPrice] = useState(50);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const userId = localStorage.getItem("user_id") || "";
-  const totalAmount = product ? product.price + shippingPrice : 0;
 
   useEffect(() => {
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -58,10 +52,7 @@ const Checkout = () => {
       setProductId(id);
       fetch(`${API}/products/${id}`)
         .then((res) => res.json())
-        .then(data => {
-          setProduct(data);
-          setShippingPrice(data.shippingPrice || 50);
-        })
+        .then(setProduct)
         .catch(() => setProduct(null));
     }
   }, []);
@@ -125,40 +116,38 @@ const Checkout = () => {
 
   const makePayment = async () => {
     if (!productId || !userId) return;
-    
-    setIsProcessing(true);
+
     const payload = {
-      email,
-      amount: totalAmount,
       userId,
       productId,
+      productName: product?.name,
+      amount: product?.price,
       phone,
-      additionalphone: receiverPhone,
       address,
-      notes: notes,
-      quantity: 1
+      notes,
+      additionalphone: receiverPhone,
     };
 
     try {
-      const res = await axios.post(`${API}/pay`, payload);
-      if (res.data.checkout_url) {
-        window.location.href = res.data.checkout_url;
+      const res = await fetch(`${API}/payment/initiate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.checkout_url) {
+        window.location.href = data.checkout_url;
       } else {
-        alert("Payment failed: " + (res.data.message || "Unknown error"));
+        alert("Payment failed: " + (data.message || "Unknown error"));
       }
     } catch (err) {
-      const errorMsg = err.response?.data?.error || "Check console for details";
-      alert("Payment error: " + errorMsg);
-      console.error("Payment error:", err.response?.data || err.message);
-    } finally {
-      setIsProcessing(false);
+      alert("Payment error");
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (
-      !isValidEmail(email) ||
       !isValidPhone(phone) ||
       !isValidPhone(receiverPhone) ||
       !deliveryAllowed ||
@@ -169,11 +158,7 @@ const Checkout = () => {
   };
 
   const isFormValid =
-    isValidEmail(email) && 
-    isValidPhone(phone) &&
-    isValidPhone(receiverPhone) &&
-    deliveryAllowed && 
-    address;
+    isValidPhone(phone) && isValidPhone(receiverPhone) && deliveryAllowed && address;
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
@@ -212,7 +197,7 @@ const Checkout = () => {
                 <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                   Complete Your Order
                 </h2>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">Secure checkout with Chapa payment</p>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">Secure checkout with Telbirr payment</p>
               </div>
               
               <div className="p-6">
@@ -245,47 +230,7 @@ const Checkout = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <label className="block mb-2 font-medium text-gray-800 dark:text-gray-200 flex items-center">
-                      <span>Your Email</span>
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">Required</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="your.email@example.com"
-                        required
-                        className={`w-full p-3 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'} ${
-                          email ? (isValidEmail(email) ? "border-green-500 focus:ring-green-500 focus:border-green-500" : "border-red-500 focus:ring-red-500 focus:border-red-500") : "focus:ring-indigo-500 focus:border-indigo-500"
-                        } focus:outline-none focus:ring-2 transition-colors`}
-                      />
-                      {email && (
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          {isValidEmail(email) ? (
-                            <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    {!isValidEmail(email) && email.length > 0 && (
-                      <p className="mt-2 text-red-600 text-sm flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        Enter a valid email address
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-medium text-gray-800 dark:text-gray-200 flex items-center">
-                      <span>Your Phone Number</span>
+                      <span>Your Telbirr Number</span>
                       <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">Required</span>
                     </label>
                     <div className="relative">
@@ -517,24 +462,16 @@ const Checkout = () => {
                   <div className="pt-4">
                     <button
                       type="submit"
-                      disabled={!isFormValid || isProcessing}
+                      disabled={!isFormValid}
                       className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-[1.02] ${
-                        isFormValid && !isProcessing
+                        isFormValid 
                           ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl' 
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      {isProcessing ? (
+                      {isFormValid ? (
                         <div className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Processing Payment...
-                        </div>
-                      ) : isFormValid ? (
-                        <div className="flex items-center justify-center">
-                          <span>Pay {totalAmount} ETB</span>
+                          <span>Pay Now</span>
                           <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                           </svg>
@@ -593,7 +530,7 @@ const Checkout = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Shipping</span>
-                    <span className="font-medium">{shippingPrice} ETB</span>
+                    <span className="font-medium text-green-600">FREE</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Tax</span>
@@ -602,7 +539,7 @@ const Checkout = () => {
                   <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
                     <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
                     <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
-                      {totalAmount} ETB
+                      {product?.price || 0} ETB
                     </span>
                   </div>
                 </div>
@@ -615,7 +552,7 @@ const Checkout = () => {
                     Secure Payment
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Your payment is securely processed by Chapa. We do not store your payment details.
+                    Your payment is securely processed by Telbirr. We do not store your payment details.
                   </p>
                 </div>
                 
@@ -639,7 +576,7 @@ const Checkout = () => {
         </div>
         
         <footer className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-800 text-center text-gray-500 dark:text-gray-400 text-sm">
-          <p>© 2023 ShopSphere. All rights reserved. Payment processed securely via Chapa.</p>
+          <p>© 2023 ShopSphere. All rights reserved. Payment processed securely via Telbirr.</p>
           <div className="mt-2 flex justify-center space-x-6">
             <a href="#" className="hover:text-indigo-600 transition-colors">Terms</a>
             <a href="#" className="hover:text-indigo-600 transition-colors">Privacy</a>
@@ -653,3 +590,89 @@ const Checkout = () => {
 };
 
 export default Checkout;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const express = require("express");
+const axios = require("axios");
+const { v4: uuidv4 } = require("uuid");
+const { Payment } = require("../models");
+
+const router = express.Router();
+
+router.post("/pay", async (req, res) => {
+  const { email, amount } = req.body;
+
+  if (!email || !amount) {
+    return res.status(400).json({ error: "Missing email or amount" });
+  }
+
+  const tx_ref = uuidv4();
+
+  try {
+    const response = await axios.post(
+      "https://api.chapa.co/v1/transaction/initialize",
+      {
+        amount,
+        currency: "ETB",
+        email,
+        tx_ref,
+        return_url: `${process.env.CLIENT_URL}/payment-success`,
+        callback_url: `${process.env.CLIENT_URL}/api/verify-payment`,
+        customization: {
+          title: "Checkout",
+          description: "Chapa payment integration",
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // Chapa API error (but still 200 OK)
+    if (response.data.status !== "success") {
+      return res.status(400).json({
+        error: response.data.message || "Failed to initialize payment",
+      });
+    }
+
+    await Payment.create({
+      chapaTxRef: tx_ref,
+      amount,
+      status: "initiated",
+      rawResponse: response.data,
+    });
+
+    return res.json({
+      checkout_url: response.data.data.checkout_url,
+    });
+  } catch (err) {
+    console.error("Chapa Error:", err.response?.data || err.message);
+    return res.status(500).json({
+      error: "Payment request failed. Check Chapa credentials.",
+    });
+  }
+});
+
+module.exports = router;

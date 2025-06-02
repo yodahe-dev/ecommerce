@@ -31,7 +31,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     orderStatus: {
       type: DataTypes.ENUM('expired', 'pending', 'paid'),
-      defaultValue: 'pending',
+      defaultValue: 'paid',
       allowNull: false,
     },
     receiveStatus: {

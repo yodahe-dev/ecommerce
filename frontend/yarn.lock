@@ -213,6 +213,11 @@
     "@babel/helper-validator-identifier" "^7.22.20"
     to-fast-properties "^2.0.0"
 
+"@chapa_et/inline.js@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.npmjs.org/@chapa_et/inline.js/-/inline.js-1.0.1.tgz"
+  integrity sha512-bVFHkBZXew5iKTTowNdkTobGKnCcI2Lc+teNmUztLcLWP7ElHyYLfQCr6lcgDhYBdZLDDp+M23qKpz6lZ+Qk0Q==
+
 "@clerk/clerk-react@^5.27.0":
   version "5.27.0"
   resolved "https://registry.npmjs.org/@clerk/clerk-react/-/clerk-react-5.27.0.tgz"

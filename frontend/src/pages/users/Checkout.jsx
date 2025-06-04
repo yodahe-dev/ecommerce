@@ -36,6 +36,8 @@ const Checkout = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [shippingPrice, setShippingPrice] = useState(50);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [orderId, setOrderId] = useState(null);
 
   const userId = localStorage.getItem("user_id") || "";
   const totalAmount = product ? product.price + shippingPrice : 0;
@@ -48,6 +50,33 @@ const Checkout = () => {
     darkModeMediaQuery.addEventListener('change', handleChange);
     
     return () => darkModeMediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    const verifyPayment = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tx_ref = urlParams.get('tx_ref');
+      
+      if (tx_ref) {
+        try {
+          const response = await axios.get(`${API}/verify-payment?tx_ref=${tx_ref}`);
+          if (response.data.status === 'success') {
+            setVerificationStatus('success');
+            if (response.data.orderId) {
+              setOrderId(response.data.orderId);
+              localStorage.setItem('lastOrderId', response.data.orderId);
+            }
+          } else {
+            setVerificationStatus('failed');
+          }
+        } catch (error) {
+          setVerificationStatus('error');
+          console.error("Payment verification error:", error);
+        }
+      }
+    };
+
+    verifyPayment();
   }, []);
 
   useEffect(() => {
@@ -142,6 +171,10 @@ const Checkout = () => {
     try {
       const res = await axios.post(`${API}/pay`, payload);
       if (res.data.checkout_url) {
+        // Store order ID for later reference
+        if (res.data.orderId) {
+          localStorage.setItem('lastOrderId', res.data.orderId);
+        }
         window.location.href = res.data.checkout_url;
       } else {
         alert("Payment failed: " + (res.data.message || "Unknown error"));
@@ -648,6 +681,82 @@ const Checkout = () => {
           </div>
         </footer>
       </div>
+
+      {/* Payment Verification Modals */}
+      {verificationStatus === 'success' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`max-w-md w-full rounded-2xl p-6 ${
+            isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
+          }`}>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Payment Successful!</h2>
+              <p className="mb-6">Your order has been placed successfully. Order ID: {orderId || localStorage.getItem('lastOrderId')}</p>
+              <button 
+                onClick={() => {
+                  setVerificationStatus(null);
+                  window.location.href = "/";
+                }}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {verificationStatus === 'failed' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`max-w-md w-full rounded-2xl p-6 ${
+            isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
+          }`}>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Payment Failed</h2>
+              <p className="mb-6">Your payment could not be processed. Please try again.</p>
+              <button 
+                onClick={() => setVerificationStatus(null)}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {verificationStatus === 'error' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`max-w-md w-full rounded-2xl p-6 ${
+            isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
+          }`}>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Verification Error</h2>
+              <p className="mb-6">There was an issue verifying your payment. Please contact support.</p>
+              <button 
+                onClick={() => setVerificationStatus(null)}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

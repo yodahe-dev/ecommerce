@@ -35,24 +35,25 @@ export default function Profile({ token, darkMode, setDarkMode }) {
     bio: "",
     oldPassword: "",
     newPassword: "",
+    confirmPassword: "",
     shopName: ""
   });
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [editError, setEditError] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
   const avatarInputRef = useRef(null);
   const navigate = useNavigate();
   const [tab, setTab] = useState("orders");
 
-useEffect(() => {
-  if (user) {
-    if (user.role?.name === "seller") {
-      setTab("posts");
-    } else {
-      setTab("orders");
+  useEffect(() => {
+    if (user) {
+      if (user.role?.name === "seller") {
+        setTab("posts");
+      } else {
+        setTab("orders");
+      }
     }
-  }
-}, [user]);
-
+  }, [user]);
 
   useEffect(() => {
     if (!token) {
@@ -67,15 +68,19 @@ useEffect(() => {
           navigate("/login");
         } else {
           setUser(res);
-          // Initialize edit form data
           setEditFormData({
             username: res.username,
             bio: res.bio || "",
             oldPassword: "",
             newPassword: "",
+            confirmPassword: "",
             shopName: res.shopName || ""
           });
-          setAvatarPreview(res.avatarUrl || null);
+          setAvatarPreview(
+            res.avatarUrl 
+              ? `${API}${res.avatarUrl}` 
+              : null
+          );
         }
         setLoading(false);
       })
@@ -185,7 +190,7 @@ useEffect(() => {
 
   const payNow = async (orderId) => {
     try {
-      const res = await fetch(`${API}/orders/pay/${orderId}`, {
+      const res = await fetch(`${API}/pay/${orderId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -241,10 +246,11 @@ useEffect(() => {
   const handleEditProfileSubmit = async (e) => {
     e.preventDefault();
     setEditError("");
+    setIsUpdating(true);
     
-    // Basic validation
     if (editFormData.newPassword && editFormData.newPassword !== editFormData.confirmPassword) {
       setEditError("New passwords do not match");
+      setIsUpdating(false);
       return;
     }
     
@@ -252,12 +258,21 @@ useEffect(() => {
       const formData = new FormData();
       formData.append("username", editFormData.username);
       formData.append("bio", editFormData.bio);
-      if (editFormData.oldPassword) formData.append("oldPassword", editFormData.oldPassword);
-      if (editFormData.newPassword) formData.append("newPassword", editFormData.newPassword);
-      if (avatarInputRef.current.files[0]) formData.append("avatar", avatarInputRef.current.files[0]);
-      if (user.role?.name === "seller") formData.append("shopName", editFormData.shopName);
       
-      const res = await fetch(`${API}/users/profile`, {
+      if (editFormData.oldPassword) 
+        formData.append("oldPassword", editFormData.oldPassword);
+      
+      if (editFormData.newPassword) 
+        formData.append("newPassword", editFormData.newPassword);
+      
+      if (avatarInputRef.current.files[0]) 
+        formData.append("avatar", avatarInputRef.current.files[0]);
+      
+      if (user.role?.name === "seller") 
+        formData.append("shopName", editFormData.shopName || "");
+      
+      // FIXED: Correct endpoint to match backend
+      const res = await fetch(`${API}/users/profileUpadte`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -267,15 +282,25 @@ useEffect(() => {
       
       if (res.ok) {
         const updatedUser = await res.json();
+        
+        // Update avatar preview with new URL
+        const newAvatar = updatedUser.avatarUrl 
+          ? `${API}${updatedUser.avatarUrl}`
+          : null;
+        
         setUser(updatedUser);
+        setAvatarPreview(newAvatar);
         setShowEditProfileModal(false);
         alert("Profile updated successfully!");
       } else {
         const error = await res.json();
-        setEditError(error.message || "Failed to update profile");
+        setEditError(error.error || "Failed to update profile");
       }
     } catch (err) {
+      console.error("Profile update error:", err);
       setEditError("Network error. Please try again later.");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -889,9 +914,16 @@ useEffect(() => {
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          disabled={isUpdating}
+                          className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                            isUpdating ? 'opacity-70 cursor-not-allowed' : 'hover:bg-indigo-700'
+                          }`}
                         >
-                          Save Changes
+                          {isUpdating ? (
+                            <FaSpinner className="animate-spin mx-auto" />
+                          ) : (
+                            'Save Changes'
+                          )}
                         </button>
                       </div>
                     </form>

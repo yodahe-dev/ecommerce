@@ -13,14 +13,6 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
-    paymentId: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'Payments',
-        key: 'id',
-      },
-    },
     productId: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -31,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     orderStatus: {
       type: DataTypes.ENUM('expired', 'pending', 'paid'),
-      defaultValue: 'paid',
+      defaultValue: 'pending',
       allowNull: false,
     },
     receiveStatus: {
@@ -44,6 +36,35 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 1,
     },
+    totalAmount: {
+      type: DataTypes.FLOAT,
+      allowNull: false
+    },
+    customerEmail: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        isEmail: true
+      }
+    },
+    customerPhone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        is: /^9\d{8}$/,
+      }
+    },
+    shippingAddress: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    receiverPhone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        is: /^9\d{8}$/,
+      }
+    },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -55,29 +76,15 @@ module.exports = (sequelize, DataTypes) => {
         this.setDataValue('notes', JSON.stringify(value));
       },
     },
-    address: {
+    chapaTxRef: {
       type: DataTypes.STRING,
-      allowNull: false,
-    },
-    phone: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        is: /^9\d{8}$/,
-      },
-    },
-    additionalphone: {  // fixed spelling here
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        is: /^9\d{8}$/,
-      },
-    },
+      allowNull: true,
+      unique: true
+    }
   });
-
+  
   Order.associate = (models) => {
     Order.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
-    Order.belongsTo(models.Payment, { foreignKey: 'paymentId', as: 'payment' });
     Order.belongsTo(models.Product, { foreignKey: 'productId', as: 'product' });
   };
 

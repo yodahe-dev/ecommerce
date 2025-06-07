@@ -441,44 +441,7 @@ export default function Profile({ token, darkMode, setDarkMode }) {
       case "orders":
         return renderOrderTabs();
       case "admin":
-        return (
-          <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">42</div>
-              <div className="mt-2 text-gray-500 dark:text-gray-400">Total Orders</div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <div className="text-3xl font-bold text-green-500">1,284 ETB</div>
-              <div className="mt-2 text-gray-500 dark:text-gray-400">Total Revenue</div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <div className="text-3xl font-bold text-amber-500">87%</div>
-              <div className="mt-2 text-gray-500 dark:text-gray-400">Conversion Rate</div>
-            </div>
-            <div className="md:col-span-2 lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Top Products</h3>
-              <div className="space-y-3">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="flex items-center justify-between border-b pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
-                      <div>
-                        <div className="font-medium">Product Name</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">Category</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold">129.99 ETB</div>
-                      <div className="text-sm text-green-500">24 sold</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      default:
-        return null;
+       return "admin"
     }
   };
 
@@ -557,9 +520,6 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                       {user.shopName}
                     </div>
                   )}
-                  <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-sm">
-                    24 Orders
-                  </div>
                 </div>
               </div>
             </div>
@@ -571,12 +531,6 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                 aria-label="Toggle dark mode"
               >
                 {darkMode ? <MdLightMode className="text-xl" /> : <MdDarkMode className="text-xl" />}
-              </button>
-              <button 
-                onClick={() => setShowEditProfileModal(true)}
-                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors"
-              >
-                Edit Profile
               </button>
             </div>
           </div>
@@ -725,208 +679,6 @@ export default function Profile({ token, darkMode, setDarkMode }) {
                         Submit Review
                       </button>
                     </div>
-                  </Dialog.Panel>
-                </Transition.Child>
-              </div>
-            </div>
-          </Dialog>
-        </Transition>
-
-        {/* Edit Profile Modal */}
-        <Transition appear show={showEditProfileModal} as={Fragment}>
-          <Dialog as="div" className="relative z-50" onClose={() => setShowEditProfileModal(false)}>
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-            </Transition.Child>
-
-            <div className="fixed inset-0 overflow-y-auto">
-              <div className="flex min-h-full items-center justify-center p-4 text-center">
-                <Transition.Child
-                  as={Fragment}
-                  enter="ease-out duration-300"
-                  enterFrom="opacity-0 scale-95"
-                  enterTo="opacity-100 scale-100"
-                  leave="ease-in duration-200"
-                  leaveFrom="opacity-100 scale-100"
-                  leaveTo="opacity-0 scale-95"
-                >
-                  <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
-                    <div className="flex justify-between items-center mb-4">
-                      <Dialog.Title
-                        as="h3"
-                        className="text-lg font-bold leading-6 text-gray-900 dark:text-white"
-                      >
-                        Edit Profile
-                      </Dialog.Title>
-                      <button
-                        type="button"
-                        className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                        onClick={() => setShowEditProfileModal(false)}
-                      >
-                        <MdClose className="h-6 w-6" />
-                      </button>
-                    </div>
-                    
-                    <form onSubmit={handleEditProfileSubmit}>
-                      <div className="space-y-4">
-                        {/* Avatar Upload */}
-                        <div className="flex flex-col items-center mb-4">
-                          <div className="relative">
-                            {avatarPreview ? (
-                              <img 
-                                src={avatarPreview} 
-                                alt="Avatar" 
-                                className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500"
-                              />
-                            ) : (
-                              <div className="bg-gray-200 border-2 border-dashed rounded-full w-24 h-24 flex items-center justify-center">
-                                <FaUserCircle className="text-4xl text-gray-400" />
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-md border border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
-                              onClick={triggerAvatarInput}
-                            >
-                              <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                              </svg>
-                            </button>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              ref={avatarInputRef}
-                              onChange={handleAvatarChange}
-                              className="hidden"
-                            />
-                          </div>
-                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Click to change profile picture
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Username
-                          </label>
-                          <input
-                            type="text"
-                            value={editFormData.username}
-                            onChange={(e) => setEditFormData({...editFormData, username: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            placeholder="Enter your username"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Bio
-                          </label>
-                          <textarea
-                            value={editFormData.bio}
-                            onChange={(e) => setEditFormData({...editFormData, bio: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            placeholder="Tell us about yourself"
-                            rows="3"
-                          />
-                        </div>
-                        
-                        {user.role?.name === "seller" && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Shop Name
-                            </label>
-                            <input
-                              type="text"
-                              value={editFormData.shopName}
-                              onChange={(e) => setEditFormData({...editFormData, shopName: e.target.value})}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                              placeholder="Enter your shop name"
-                            />
-                          </div>
-                        )}
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Old Password
-                          </label>
-                          <input
-                            type="password"
-                            value={editFormData.oldPassword}
-                            onChange={(e) => setEditFormData({...editFormData, oldPassword: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            placeholder="Enter old password"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            New Password
-                          </label>
-                          <input
-                            type="password"
-                            value={editFormData.newPassword}
-                            onChange={(e) => setEditFormData({...editFormData, newPassword: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            placeholder="Enter new password"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Confirm New Password
-                          </label>
-                          <input
-                            type="password"
-                            value={editFormData.confirmPassword}
-                            onChange={(e) => setEditFormData({...editFormData, confirmPassword: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            placeholder="Confirm new password"
-                          />
-                        </div>
-                        
-                        {editError && (
-                          <div className="mt-4 bg-red-50 border-l-4 border-red-500 p-3 rounded-md">
-                            <div className="flex items-center">
-                              <ExclamationCircleIcon className="h-5 w-5 text-red-500 mr-3" />
-                              <p className="text-sm text-red-700">{editError}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="mt-6 flex justify-end gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setShowEditProfileModal(false)}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={isUpdating}
-                          className={`px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                            isUpdating ? 'opacity-70 cursor-not-allowed' : 'hover:bg-indigo-700'
-                          }`}
-                        >
-                          {isUpdating ? (
-                            <FaSpinner className="animate-spin mx-auto" />
-                          ) : (
-                            'Save Changes'
-                          )}
-                        </button>
-                      </div>
-                    </form>
                   </Dialog.Panel>
                 </Transition.Child>
               </div>

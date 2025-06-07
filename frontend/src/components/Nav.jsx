@@ -14,6 +14,7 @@ import {
   FaHeart
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
+import { getProfile } from "../api"; // Import the getProfile function
 
 export default function Nav({
   isAuthenticated,
@@ -28,15 +29,31 @@ export default function Nav({
   const [searchTerm, setSearchTerm] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [user, setUser] = useState(null); 
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
   const navigate = useNavigate();
 
-  // Sample search suggestions
-  const products = [
-    "Smartphones", "Laptops", "Headphones", "Smart Watches", 
-    "Cameras", "Gaming Consoles", "Tablets", "Speakers"
-  ];
+
+  // Fetch user profile when authenticated
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (isAuthenticated && token) {
+        try {
+          const profileData = await getProfile(token);
+          if (profileData && profileData.user) {
+            setUser(profileData.user);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+        }
+      } else {
+        setUser(null); // Reset user when not authenticated
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, token]);
 
   useEffect(() => {
     const closeDropdown = (e) => {
@@ -118,26 +135,8 @@ export default function Nav({
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <div className="relative" ref={searchRef}>
-
-              
-              <AnimatePresence>
-                {showSearch && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className={`absolute top-full right-0 mt-3 w-80 rounded-xl shadow-lg z-50 ${
-                      darkMode ? "bg-gray-800" : "bg-white"
-                    }`}
-                  >
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
             
             <NavLink to="/" label="Home" darkMode={darkMode} />
-            <NavLink to="/search" label="search" darkMode={darkMode} />
             <NavLink to="/products" label="Products" darkMode={darkMode} />
             <NavLink to="/about" label="About" darkMode={darkMode} />
             <NavLink to="/contact" label="Contact" darkMode={darkMode} />
@@ -158,26 +157,22 @@ export default function Nav({
               </motion.div>
             </button>
             
-            <Link 
-              to="/wishlist" 
-              className={`p-2 rounded-full relative ${
-                darkMode 
-                  ? "text-gray-300 hover:text-white" 
-                  : "text-gray-600 hover:text-orange-500"
-              }`}
-            >
-              <FaHeart />
-              <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-orange-500 text-white text-xs rounded-full">
-                3
-              </div>
-            </Link>
             
-           
           </div>
 
           {/* Mobile Menu Toggle */}
           <div className="flex md:hidden items-center gap-4">
-        
+            <button
+              onClick={() => setShowSearch(true)}
+              className={`p-2 rounded-full ${
+                darkMode 
+                  ? "text-gray-300 hover:bg-gray-700" 
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <FaSearch />
+            </button>
+            
             
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -237,8 +232,20 @@ export default function Nav({
                             <FaUserAlt className="text-white text-sm" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">John Doe</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">john@afrohive.com</p>
+                            {user ? (
+                              <>
+                                <p className="font-medium text-gray-900 dark:text-white">
+                                  {user.username}
+                                </p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {user.email}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Loading...
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -246,21 +253,12 @@ export default function Nav({
                       <Link
                         to="/account"
                         className="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        onClick={() => setIsDropdownOpen(false)}
                       >
                         <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                           <FaUserAlt className="text-orange-500 dark:text-orange-400" />
                         </div>
                         <span>Profile</span>
-                      </Link>
-                      
-                      <Link
-                        to="/settings"
-                        className="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                          <FaCog className="text-orange-500 dark:text-orange-400" />
-                        </div>
-                        <span>Settings</span>
                       </Link>
                       
                       <button
@@ -312,12 +310,8 @@ export default function Nav({
                     } border focus:outline-none focus:ring-2 focus:ring-orange-400`}
                     autoFocus
                   />
-                  <FaSearch 
-                    className={`absolute left-3 top-3.5 ${
-                      darkMode ? "text-gray-400" : "text-gray-500"
-                    }`} 
-                  />
                 </div>
+
               </form>
             </motion.div>
           )}
@@ -335,21 +329,67 @@ export default function Nav({
               } shadow-lg mb-4`}
             >
               <div className="flex flex-col py-4">
-                <MobileNavLink to="/" label="Home" darkMode={darkMode} />
-                <MobileNavLink to="/search" label="search" darkMode={darkMode} />
-                <MobileNavLink to="/products" label="Products" darkMode={darkMode} />
-                <MobileNavLink to="/about" label="About" darkMode={darkMode} />
-                <MobileNavLink to="/contact" label="Contact Us" darkMode={darkMode} />
-                <MobileNavLink to="/wishlist" label="Wishlist" darkMode={darkMode} />
-                
+                <MobileNavLink 
+                  to="/" 
+                  label="Home" 
+                  darkMode={darkMode} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                <MobileNavLink 
+                  to="/products" 
+                  label="Products" 
+                  darkMode={darkMode} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                <MobileNavLink 
+                  to="/about" 
+                  label="About" 
+                  darkMode={darkMode} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+                <MobileNavLink 
+                  to="/contact" 
+                  label="Contact Us" 
+                  darkMode={darkMode} 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
                 
                 <div className="px-4 py-3 mt-2">
                   {isAuthenticated ? (
                     <div className="flex flex-col gap-3">
-                      <MobileNavLink to="/account" label="Profile" darkMode={darkMode} />
-                      <MobileNavLink to="/settings" label="Settings" darkMode={darkMode} />
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-400 to-amber-500 flex items-center justify-center">
+                          <FaUserAlt className="text-white text-sm" />
+                        </div>
+                        <div>
+                          {user ? (
+                            <>
+                              <p className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
+                                {user.username}
+                              </p>
+                              <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                {user.email}
+                              </p>
+                            </>
+                          ) : (
+                            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              Loading...
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <MobileNavLink 
+                        to="/account" 
+                        label="Profile" 
+                        darkMode={darkMode} 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      />
                       <button
-                        onClick={onLogout}
+                        onClick={() => {
+                          onLogout();
+                          setIsMobileMenuOpen(false);
+                        }}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                       >
                         <FaSignOutAlt className="text-red-500" />
@@ -360,6 +400,7 @@ export default function Nav({
                     <Link
                       to="/login"
                       className="w-full block text-center px-4 py-3 rounded-lg bg-gradient-to-r from-orange-400 to-amber-500 text-white font-medium"
+                      onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Sign In
                     </Link>
@@ -394,11 +435,11 @@ function NavLink({ to, label, darkMode }) {
   );
 }
 
-
-function MobileNavLink({ to, label, darkMode }) {
+function MobileNavLink({ to, label, darkMode, onClick }) {
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={`px-6 py-3 text-lg font-medium ${
         darkMode 
           ? "text-gray-300 hover:bg-gray-700 hover:text-white" 

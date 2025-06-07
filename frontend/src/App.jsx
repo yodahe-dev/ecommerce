@@ -17,7 +17,6 @@ import ProductDetail from "./pages/users/details";
 import Checkout from "./pages/users/Checkout";
 import Search from "./pages/users/Search";
 import CreateProduct from "./components/CreateProduct";
-import PaymentSuccess from "./pages/payment-success";
 
 function App() {
   const [token, setToken] = useState("");
@@ -265,8 +264,6 @@ function App() {
             <Route path="/products" element={<Catagory />} />
             <Route path="/about" element={<About />} />
             <Route path="/search" element={<Search />} />
-            <Route path="/payment-success" element={<PaymentSuccess/>} />
-
 
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/upload" element={<CreateProduct/>} />
